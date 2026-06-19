@@ -6,38 +6,43 @@
 <title>GeoBots — Botswana Crime Mapping</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-/* ── TOKENS ─────────────────────────────────────────────── */
+/* ── TOKENS ──────────────────────────────────────────────── */
 :root {
-  --bg:      #0d0d0d;
-  --surface: #1a1a1a;
-  --card:    #222222;
-  --card2:   #2a2a2a;
+  --bg:      #0a0a0f;
+  --surface: #13131a;
+  --card:    #1c1c26;
+  --card2:   #252530;
   --accent:  #C8FF00;
-  --adim:    rgba(200,255,0,0.12);
-  --danger:  #FF6464;
-  --ddim:    rgba(255,100,100,0.18);
-  --gbv:     #9333ea;
-  --gdim:    rgba(147,51,234,0.18);
-  --t1:      #ffffff;
-  --t2:      #8A8A8A;
-  --t3:      #4a4a4a;
-  --border:  #2a2a2a;
-  --blight:  #333333;
-  --nav-h:   64px;
+  --adim:    rgba(200,255,0,0.10);
+  --danger:  #FF5C5C;
+  --ddim:    rgba(255,92,92,0.15);
+  --gbv:     #a855f7;
+  --gdim:    rgba(168,85,247,0.15);
+  --t1:      #f0f0ff;
+  --t2:      #7878a0;
+  --t3:      #3a3a55;
+  --border:  rgba(255,255,255,0.07);
+  --blight:  rgba(255,255,255,0.12);
+  --nav-h:   68px;
   --bar-h:   56px;
-  --r:       12px;
+  --r:       14px;
   --safe-b:  env(safe-area-inset-bottom, 0px);
+
+  /* Easing */
+  --spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --smooth:  cubic-bezier(0.4, 0, 0.2, 1);
+  --out:     cubic-bezier(0, 0, 0.2, 1);
 }
 html.light {
-  --bg:      #f0f2f5;
+  --bg:      #f0f2f8;
   --surface: #ffffff;
-  --card:    #f8f9fb;
-  --card2:   #eeeff2;
-  --t1:      #1a1a1a;
-  --t2:      #666666;
-  --t3:      #aaaaaa;
-  --border:  #e0e2e8;
-  --blight:  #d0d2d8;
+  --card:    #f7f8fc;
+  --card2:   #eeeff5;
+  --t1:      #0f0f1a;
+  --t2:      #6060a0;
+  --t3:      #b0b0d0;
+  --border:  rgba(0,0,0,0.08);
+  --blight:  rgba(0,0,0,0.14);
 }
 
 /* ── RESET ───────────────────────────────────────────────── */
@@ -46,90 +51,188 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;b
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,textarea,select{font-family:inherit}
 a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:0}
 
-/* ── TOP BAR ─────────────────────────────────────────────── */
+/* ── LIQUID ANIMATIONS ──────────────────────────────────── */
+@keyframes liquidIn {
+  0%   { transform:translateY(24px) scale(0.97); opacity:0; filter:blur(6px) }
+  65%  { transform:translateY(-5px) scale(1.01); opacity:1; filter:blur(0) }
+  100% { transform:translateY(0) scale(1); opacity:1; filter:blur(0) }
+}
+@keyframes fadeUp {
+  from { transform:translateY(16px); opacity:0 }
+  to   { transform:translateY(0); opacity:1 }
+}
+@keyframes pulse-ring {
+  0%   { transform:scale(1); opacity:.7 }
+  70%  { transform:scale(2.6); opacity:0 }
+  100% { transform:scale(2.6); opacity:0 }
+}
+@keyframes wave {
+  0%   { background-position: -200% center }
+  100% { background-position: 200% center }
+}
+@keyframes countUp {
+  from { opacity:0; transform:translateY(8px) }
+  to   { opacity:1; transform:translateY(0) }
+}
+@keyframes shimmer {
+  0%   { opacity:.4 }
+  50%  { opacity:1 }
+  100% { opacity:.4 }
+}
+@keyframes sheetUp {
+  from { transform:translateY(100%) }
+  to   { transform:translateY(0) }
+}
+@keyframes navSlide {
+  from { transform:scaleX(0) }
+  to   { transform:scaleX(1) }
+}
+@keyframes drawerSlide {
+  from { transform:translateX(-100%) }
+  to   { transform:translateX(0) }
+}
+@keyframes glow {
+  0%,100% { box-shadow: 0 0 12px rgba(200,255,0,0.2) }
+  50%      { box-shadow: 0 0 28px rgba(200,255,0,0.5) }
+}
+
+/* prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important }
+}
+
+/* ── TOP BAR ──────────────────────────────────────────────── */
 #top-bar {
   position:fixed;top:0;left:0;right:0;z-index:100;
   height:var(--bar-h);
-  background:var(--surface);
+  background:rgba(10,10,15,0.85);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;padding:0 8px;gap:4px;
 }
-#btn-menu {
-  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
-  border-radius:8px;color:var(--t1);flex-shrink:0;
-}
-#bar-title {
-  flex:1;font-size:17px;font-weight:700;letter-spacing:-.3px;
-  text-align:center;color:var(--t1);
-}
-#btn-locate,#btn-theme {
-  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
-  border-radius:8px;color:var(--t2);flex-shrink:0;
-}
-#btn-locate:active,#btn-menu:active,#btn-theme:active{background:var(--card)}
+html.light #top-bar { background:rgba(255,255,255,0.88) }
 
-/* ── MAP LAYER (always present, behind screens) ──────────── */
+#bar-title {
+  flex:1;font-size:17px;font-weight:800;letter-spacing:-.5px;
+  text-align:center;
+  background:linear-gradient(135deg, #C8FF00 0%, #00e5ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+html.light #bar-title {
+  background:linear-gradient(135deg,#7030a0 0%,#0070d0 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+.bar-btn {
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  border-radius:10px;color:var(--t2);flex-shrink:0;
+  transition:background .2s var(--smooth), color .2s var(--smooth), transform .15s var(--spring);
+}
+.bar-btn:active{background:var(--card);transform:scale(.9)}
+
+/* ── MAP LAYER ───────────────────────────────────────────── */
 #map-layer {
   position:fixed;
   top:var(--bar-h);left:0;right:0;
   bottom:calc(var(--nav-h) + var(--safe-b));
   z-index:1;
+  transition:opacity .3s var(--smooth);
 }
 #map { width:100%;height:100% }
 
-/* ── MAP FABs ─────────────────────────────────────────────── */
+/* ── MAP FABs ────────────────────────────────────────────── */
 #map-fabs {
-  position:absolute;top:12px;right:12px;
-  display:flex;flex-direction:column;gap:8px;z-index:10;
+  position:absolute;top:14px;right:14px;
+  display:flex;flex-direction:column;gap:10px;z-index:10;
 }
 .fab {
-  width:44px;height:44px;border-radius:50%;
-  background:var(--surface);color:var(--t1);
+  width:46px;height:46px;border-radius:50%;
+  background:rgba(19,19,26,0.88);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  color:var(--t1);
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 8px rgba(0,0,0,.4);
-  transition:background .15s;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  border:1px solid var(--border);
+  transition:all .25s var(--spring);
+  -webkit-tap-highlight-color:transparent;
 }
-.fab.active{background:var(--accent);color:#000}
-.fab:active{opacity:.8}
+.fab:active{transform:scale(.88)}
+.fab.active{
+  background:var(--accent);color:#000;border-color:var(--accent);
+  box-shadow:0 4px 20px rgba(200,255,0,0.4);
+  animation:glow 2s infinite;
+}
 
 /* ── HEAT BANNER ─────────────────────────────────────────── */
 #heat-banner {
-  position:absolute;top:12px;left:12px;
-  background:rgba(0,0,0,.7);
-  color:var(--accent);font-size:11px;font-weight:600;
-  padding:6px 10px;border-radius:20px;letter-spacing:.5px;
+  position:absolute;top:14px;left:14px;
+  background:rgba(10,10,15,0.85);
+  backdrop-filter:blur(12px);
+  color:var(--accent);font-size:11px;font-weight:700;
+  padding:6px 12px;border-radius:20px;letter-spacing:1px;
+  border:1px solid rgba(200,255,0,0.3);
   display:none;z-index:10;
+  animation:liquidIn .4s var(--spring) both;
 }
 
-/* ── PANIC STRIP (map + heat tabs only) ──────────────────── */
+/* ── PANIC STRIP ─────────────────────────────────────────── */
 #panic-strip {
   position:absolute;bottom:0;left:0;right:0;
-  display:flex;flex-direction:column;gap:6px;
-  padding:8px 12px;
-  background:linear-gradient(transparent, rgba(0,0,0,.8) 30%);
+  display:flex;flex-direction:column;gap:8px;
+  padding:10px 14px;
+  background:linear-gradient(0deg, rgba(10,10,15,.95) 0%, rgba(10,10,15,.7) 60%, transparent 100%);
   z-index:10;
+}
+html.light #panic-strip {
+  background:linear-gradient(0deg,rgba(240,242,248,.95) 0%,rgba(240,242,248,.7) 60%,transparent 100%);
 }
 
 /* ── PANIC BUTTON ─────────────────────────────────────────── */
 .pbtn {
   position:relative;overflow:hidden;
-  width:100%;height:52px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  font-size:14px;font-weight:700;letter-spacing:.3px;
+  width:100%;height:54px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:14px;font-weight:800;letter-spacing:.3px;
   color:#fff;cursor:pointer;user-select:none;
   -webkit-tap-highlight-color:transparent;
-  transition:transform .1s;
+  transition:transform .15s var(--spring), box-shadow .2s var(--smooth);
+  border:none;
 }
-.pbtn:active{transform:scale(.98)}
-.pbtn-999 { background:var(--danger) }
-.pbtn-gbv { background:var(--gbv) }
+.pbtn:active{transform:scale(.96)}
+.pbtn-999 {
+  background:linear-gradient(135deg, #ff6b6b 0%, #ee2222 100%);
+  box-shadow:0 4px 20px rgba(255,60,60,.35);
+}
+.pbtn-gbv {
+  background:linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);
+  box-shadow:0 4px 20px rgba(168,85,247,.35);
+}
 .pbtn-fill {
   position:absolute;left:0;top:0;bottom:0;width:0%;
-  background:rgba(255,255,255,.22);
-  transition:none;pointer-events:none;
+  pointer-events:none;overflow:hidden;border-radius:inherit;
 }
-.pbtn svg { flex-shrink:0 }
+.pbtn-fill::after {
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,255,255,.3) 40%,
+    rgba(255,255,255,.5) 50%,
+    rgba(255,255,255,.3) 60%,
+    transparent 100%);
+  background-size:200% 100%;
+  animation:wave 1s linear infinite;
+}
+.pbtn-fill-bg {
+  position:absolute;inset:0;
+  background:rgba(255,255,255,.18);
+}
+.pbtn svg{flex-shrink:0;z-index:1}
+.pbtn span{z-index:1}
 
 /* ── SCREEN HOST ─────────────────────────────────────────── */
 #screen-host {
@@ -143,380 +246,457 @@ a{color:inherit;text-decoration:none}
   position:absolute;inset:0;
   display:none;overflow-y:auto;
   pointer-events:all;
+  will-change:transform,opacity;
 }
 .screen.active{display:block}
-#screen-map,#screen-heat {
-  background:transparent;pointer-events:none;
-}
+.screen.entering{animation:liquidIn .45s var(--spring) both}
+#screen-map,#screen-heat{background:transparent;pointer-events:none}
 #screen-map.active,#screen-heat.active{pointer-events:none}
-#screen-report,#screen-tips,#screen-safety {
-  background:var(--bg);
-}
+#screen-report,#screen-tips,#screen-safety{background:var(--bg)}
 
 /* ── BOTTOM NAV ──────────────────────────────────────────── */
 #bottom-nav {
   position:fixed;bottom:0;left:0;right:0;z-index:100;
   height:calc(var(--nav-h) + var(--safe-b));
-  background:var(--surface);
+  background:rgba(10,10,15,0.92);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
   border-top:1px solid var(--border);
-  display:flex;align-items:flex-start;padding-top:4px;
+  display:flex;align-items:flex-start;
+  padding-top:6px;
   padding-bottom:var(--safe-b);
 }
+html.light #bottom-nav{background:rgba(255,255,255,0.92)}
+
 .nav-item {
   flex:1;display:flex;flex-direction:column;align-items:center;
   gap:3px;padding:6px 4px;color:var(--t2);cursor:pointer;
-  font-size:10px;font-weight:500;letter-spacing:.3px;
-  border-radius:8px;transition:color .15s;
+  font-size:10px;font-weight:600;letter-spacing:.4px;
+  position:relative;
+  transition:color .25s var(--smooth);
   -webkit-tap-highlight-color:transparent;
 }
-.nav-item svg{transition:transform .15s}
+.nav-item svg{transition:transform .3s var(--spring)}
 .nav-item.active{color:var(--accent)}
-.nav-item.active svg{transform:scale(1.12)}
-.nav-item:active{opacity:.7}
+.nav-item.active svg{transform:scale(1.18) translateY(-2px)}
+.nav-item::after {
+  content:'';
+  position:absolute;bottom:-2px;left:50%;
+  transform:translateX(-50%) scaleX(0);
+  width:28px;height:3px;border-radius:2px;
+  background:var(--accent);
+  transition:transform .3s var(--spring);
+}
+.nav-item.active::after{transform:translateX(-50%) scaleX(1)}
+
+/* ── RIPPLE ──────────────────────────────────────────────── */
+.ripple-host{position:relative;overflow:hidden}
+.ripple-wave {
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,.25);
+  transform:scale(0);
+  animation:rippleAnim .5s var(--out) forwards;
+  pointer-events:none;
+}
+@keyframes rippleAnim {
+  to{transform:scale(4);opacity:0}
+}
 
 /* ── DRAWER ──────────────────────────────────────────────── */
 #drawer-overlay {
   position:fixed;inset:0;z-index:200;
-  background:rgba(0,0,0,.6);
+  background:rgba(0,0,0,.65);
   opacity:0;pointer-events:none;
-  transition:opacity .3s;
+  transition:opacity .3s var(--smooth);
 }
 #drawer-overlay.visible{opacity:1;pointer-events:all}
 #drawer {
   position:fixed;top:0;left:0;bottom:0;z-index:201;
-  width:min(300px,80vw);
+  width:min(300px,82vw);
   background:var(--surface);
+  border-right:1px solid var(--border);
   transform:translateX(-100%);
-  transition:transform .3s ease-out;
+  transition:transform .35s var(--spring);
   display:flex;flex-direction:column;overflow-y:auto;
 }
 #drawer.open{transform:translateX(0)}
 
 .drawer-profile {
-  padding:40px 20px 20px;
-  background:linear-gradient(135deg, var(--gbv) 0%, var(--danger) 100%);
+  padding:44px 20px 22px;
+  background:linear-gradient(135deg,rgba(168,85,247,.8) 0%,rgba(255,92,92,.7) 100%);
+  position:relative;overflow:hidden;
+}
+.drawer-profile::before {
+  content:'';position:absolute;inset:-50%;
+  background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);
+  animation:shimmer 3s ease-in-out infinite;
 }
 .drawer-avatar {
-  width:56px;height:56px;border-radius:50%;
-  background:rgba(255,255,255,.2);
+  width:58px;height:58px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  border:2px solid rgba(255,255,255,.3);
   display:flex;align-items:center;justify-content:center;
   margin-bottom:10px;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);
 }
-.drawer-name{font-size:16px;font-weight:700;color:#fff;margin-bottom:2px}
-.drawer-sub{font-size:12px;color:rgba(255,255,255,.7)}
+.drawer-name{font-size:16px;font-weight:800;color:#fff;margin-bottom:3px}
+.drawer-sub{font-size:12px;color:rgba(255,255,255,.65)}
 
-.drawer-nav{padding:12px 0}
+.drawer-nav{padding:10px 0}
 .drawer-item {
   display:flex;align-items:center;gap:14px;
-  padding:14px 20px;color:var(--t1);font-size:14px;
-  cursor:pointer;transition:background .15s;
+  padding:14px 20px;color:var(--t1);font-size:14px;font-weight:500;
+  cursor:pointer;
+  transition:background .2s var(--smooth), transform .15s var(--spring);
+  -webkit-tap-highlight-color:transparent;
 }
-.drawer-item:active{background:var(--card)}
-.drawer-item svg{color:var(--t2)}
-
-.drawer-divider{height:1px;background:var(--border);margin:4px 16px}
+.drawer-item:active{background:var(--card);transform:translateX(4px)}
+.drawer-item svg{color:var(--t2);transition:color .2s}
+.drawer-item:active svg{color:var(--accent)}
+.drawer-divider{height:1px;background:var(--border);margin:6px 16px}
 
 /* ── SECTION HEADERS ─────────────────────────────────────── */
 .section-head {
-  padding:18px 16px 8px;
-  font-size:12px;font-weight:700;letter-spacing:.8px;
+  padding:20px 16px 8px;
+  font-size:11px;font-weight:700;letter-spacing:1px;
   text-transform:uppercase;color:var(--t2);
 }
 
-/* ── CARDS / GENERIC ─────────────────────────────────────── */
-.card {
-  background:var(--card);border-radius:var(--r);
-  border:1px solid var(--border);
-}
-.card2 {
-  background:var(--card2);border-radius:var(--r);
-  border:1px solid var(--border);
-}
+/* ── CARDS ───────────────────────────────────────────────── */
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border)}
+.card2{background:var(--card2);border-radius:var(--r);border:1px solid var(--border)}
 
 /* ── REPORT SCREEN ───────────────────────────────────────── */
-#screen-report { padding-bottom:16px }
+#screen-report{padding-bottom:20px}
 .anon-banner {
   margin:12px 16px 0;
-  background:var(--adim);border:1px solid var(--accent);
-  border-radius:10px;padding:10px 14px;
+  background:var(--adim);border:1px solid rgba(200,255,0,.3);
+  border-radius:12px;padding:10px 14px;
   display:flex;align-items:center;gap:10px;
   font-size:13px;color:var(--accent);font-weight:600;
+  animation:fadeUp .4s var(--spring) both;
 }
 .anon-banner svg{flex-shrink:0}
 
 .form-card {
-  margin:12px 16px;padding:16px;
+  margin:12px 16px;padding:18px;
   background:var(--card);border-radius:var(--r);
   border:1px solid var(--border);
+  animation:fadeUp .4s var(--spring) .05s both;
 }
-.form-card h3{font-size:15px;font-weight:700;margin-bottom:14px;color:var(--t1)}
-.form-group{margin-bottom:12px}
-.form-group label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase}
+.form-card h3{font-size:15px;font-weight:800;margin-bottom:16px;color:var(--t1)}
+.form-group{margin-bottom:13px}
+.form-group label{
+  display:block;font-size:11px;font-weight:700;
+  color:var(--t2);margin-bottom:6px;letter-spacing:.6px;text-transform:uppercase
+}
 .form-group input,
 .form-group select,
 .form-group textarea {
-  width:100%;background:var(--surface);
-  border:1px solid var(--border);border-radius:8px;
-  padding:10px 12px;font-size:14px;color:var(--t1);
-  outline:none;transition:border-color .15s;
+  width:100%;background:var(--card2);
+  border:1px solid var(--border);border-radius:10px;
+  padding:11px 14px;font-size:14px;color:var(--t1);
+  outline:none;
+  transition:border-color .2s var(--smooth), box-shadow .2s var(--smooth), transform .15s var(--spring);
   -webkit-appearance:none;
 }
 .form-group input:focus,
 .form-group select:focus,
-.form-group textarea:focus{border-color:var(--accent)}
-.form-group textarea{resize:vertical;min-height:80px}
-.form-group select option{background:var(--surface);color:var(--t1)}
+.form-group textarea:focus {
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(200,255,0,.12);
+  transform:translateY(-1px);
+}
+.form-group textarea{resize:vertical;min-height:82px}
+.form-group select option{background:var(--card);color:var(--t1)}
 
 .btn-submit {
-  width:100%;height:48px;border-radius:10px;
-  background:var(--accent);color:#000;
-  font-size:15px;font-weight:700;
-  margin-top:4px;
+  width:100%;height:50px;border-radius:12px;
+  background:linear-gradient(135deg,#d4ff00 0%,#9fff00 100%);
+  color:#000;font-size:15px;font-weight:800;
+  margin-top:6px;
+  box-shadow:0 4px 16px rgba(200,255,0,.3);
+  transition:transform .2s var(--spring), box-shadow .2s var(--smooth), opacity .15s;
+  -webkit-tap-highlight-color:transparent;
 }
-.btn-submit:active{opacity:.85}
+.btn-submit:active{transform:scale(.97);box-shadow:0 2px 8px rgba(200,255,0,.2)}
 
 /* ── TIPS SCREEN ─────────────────────────────────────────── */
 .tips-bar {
-  padding:12px 16px 8px;
-  display:flex;align-items:center;gap:8px;
+  padding:14px 16px 8px;
+  display:flex;align-items:center;gap:10px;
+  animation:fadeUp .35s var(--spring) both;
 }
-.tips-bar h2{font-size:17px;font-weight:700;flex:1}
+.tips-bar h2{font-size:18px;font-weight:800;flex:1}
 .tip-count {
   background:var(--adim);color:var(--accent);
   font-size:11px;font-weight:700;
-  padding:3px 8px;border-radius:20px;
+  padding:4px 10px;border-radius:20px;
+  border:1px solid rgba(200,255,0,.2);
 }
 
 .tip-card {
   margin:0 16px 10px;
   background:var(--card);border-radius:var(--r);
-  border:1px solid var(--border);padding:14px;
+  border:1px solid var(--border);padding:15px;
+  transition:transform .2s var(--spring), box-shadow .2s var(--smooth);
+  -webkit-tap-highlight-color:transparent;
 }
+.tip-card:active{transform:scale(.98);box-shadow:none}
+
 .tip-top {
   display:flex;align-items:center;gap:8px;margin-bottom:8px;
 }
 .tip-badge {
-  font-size:10px;font-weight:700;letter-spacing:.4px;
-  padding:3px 8px;border-radius:20px;text-transform:uppercase;
+  font-size:10px;font-weight:700;letter-spacing:.5px;
+  padding:3px 9px;border-radius:20px;text-transform:uppercase;
 }
 .tip-verified {
   margin-left:auto;display:flex;align-items:center;gap:4px;
-  font-size:11px;color:var(--accent);font-weight:600;
+  font-size:11px;color:var(--accent);font-weight:700;
 }
 .tip-meta {
-  font-size:11px;color:var(--t2);margin-bottom:6px;
+  font-size:11px;color:var(--t2);margin-bottom:8px;
   display:flex;align-items:center;gap:6px;flex-wrap:wrap;
 }
-.tip-text{font-size:13px;color:var(--t1);line-height:1.5;margin-bottom:10px}
-.tip-foot{display:flex;align-items:center;gap:8px}
+.tip-text{font-size:13px;color:var(--t1);line-height:1.55;margin-bottom:10px}
+.tip-foot{display:flex;align-items:center}
 .tip-upvote {
   display:flex;align-items:center;gap:5px;
   background:var(--card2);border:1px solid var(--border);
-  border-radius:20px;padding:5px 12px;
-  font-size:12px;font-weight:600;color:var(--t2);
-  cursor:pointer;transition:all .15s;
+  border-radius:20px;padding:6px 13px;
+  font-size:12px;font-weight:700;color:var(--t2);
+  cursor:pointer;
+  transition:all .25s var(--spring);
   -webkit-tap-highlight-color:transparent;
 }
-.tip-upvote.voted{background:var(--adim);border-color:var(--accent);color:var(--accent)}
-.tip-upvote:active{opacity:.7}
+.tip-upvote:active{transform:scale(.92)}
+.tip-upvote.voted{
+  background:var(--adim);border-color:rgba(200,255,0,.4);
+  color:var(--accent);
+  box-shadow:0 0 12px rgba(200,255,0,.15);
+}
 
 /* ── SAFETY SCREEN ───────────────────────────────────────── */
-#screen-safety { padding-bottom:24px }
-.safety-panic-wrap {
-  padding:12px 16px;display:flex;flex-direction:column;gap:6px;
-}
+#screen-safety{padding-bottom:28px}
+.safety-panic-wrap{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
 .safety-pbtn {
   position:relative;overflow:hidden;
-  width:100%;height:56px;border-radius:10px;
+  width:100%;height:58px;border-radius:14px;
   display:flex;align-items:center;justify-content:center;gap:10px;
-  font-size:15px;font-weight:700;color:#fff;
-  cursor:pointer;user-select:none;
+  font-size:15px;font-weight:800;color:#fff;
+  cursor:pointer;user-select:none;border:none;
   -webkit-tap-highlight-color:transparent;
+  transition:transform .15s var(--spring),box-shadow .2s;
 }
-.safety-pbtn.pbtn-999{background:var(--danger)}
-.safety-pbtn.pbtn-gbv{background:var(--gbv)}
+.safety-pbtn:active{transform:scale(.97)}
+.safety-pbtn.pbtn-999{
+  background:linear-gradient(135deg,#ff6b6b 0%,#ee2222 100%);
+  box-shadow:0 4px 24px rgba(255,60,60,.4);
+}
+.safety-pbtn.pbtn-gbv{
+  background:linear-gradient(135deg,#c084fc 0%,#7c3aed 100%);
+  box-shadow:0 4px 24px rgba(168,85,247,.4);
+}
 
 /* Stat pills */
-.stat-row {
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:8px;padding:0 16px 12px;
-}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 14px}
 .stat-pill {
   background:var(--card);border:1px solid var(--border);
-  border-radius:10px;padding:12px 14px;
+  border-radius:14px;padding:14px 16px;
+  transition:transform .25s var(--spring);
 }
-.stat-pill .s-val{font-size:22px;font-weight:800;color:var(--t1)}
-.stat-pill .s-lbl{font-size:11px;color:var(--t2);margin-top:2px}
+.stat-pill:active{transform:scale(.96)}
+.stat-pill .s-val{
+  font-size:26px;font-weight:900;color:var(--t1);
+  background:linear-gradient(135deg,#C8FF00,#00e5ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.stat-pill .s-lbl{font-size:11px;color:var(--t2);margin-top:2px;font-weight:500}
 
 /* Safety cards 2-col */
-.safety-grid {
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:8px;padding:0 16px 12px;
-}
+.safety-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 14px}
 .s-card {
   background:var(--card);border:1px solid var(--border);
-  border-radius:10px;padding:14px;cursor:pointer;
-  transition:background .15s;
+  border-radius:14px;padding:16px;cursor:pointer;
+  transition:transform .25s var(--spring),box-shadow .2s var(--smooth),background .2s;
   -webkit-tap-highlight-color:transparent;
 }
-.s-card:active{background:var(--card2)}
+.s-card:active{transform:scale(.95) translateY(2px);box-shadow:none}
 .s-card-icon {
-  width:36px;height:36px;border-radius:8px;
+  width:38px;height:38px;border-radius:10px;
   display:flex;align-items:center;justify-content:center;
-  margin-bottom:8px;
+  margin-bottom:10px;
 }
-.s-card h4{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px}
-.s-card p{font-size:10px;color:var(--t2);line-height:1.4}
+.s-card h4{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.s-card p{font-size:11px;color:var(--t2);line-height:1.4}
 
-/* GBV Resources */
-.gbv-section { padding:0 16px 12px }
+/* GBV collapsible */
+.gbv-section{padding:0 16px 14px}
 .gbv-head {
   display:flex;align-items:center;gap:10px;
-  padding:12px 0 10px;cursor:pointer;
+  padding:14px 0 12px;cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
-.gbv-head h3{font-size:14px;font-weight:700;flex:1}
+.gbv-head h3{font-size:14px;font-weight:800;flex:1;color:var(--t1)}
 .gbv-badge {
   background:var(--gdim);color:var(--gbv);
   font-size:10px;font-weight:700;padding:3px 8px;
-  border-radius:20px;letter-spacing:.4px;
+  border-radius:20px;letter-spacing:.5px;
+  border:1px solid rgba(168,85,247,.25);
 }
-.gbv-chevron{color:var(--t2);transition:transform .25s}
+.gbv-chevron{color:var(--t2);transition:transform .3s var(--spring);flex-shrink:0}
 .gbv-chevron.open{transform:rotate(180deg)}
-.gbv-body{display:none}
-.gbv-body.open{display:block}
+.gbv-body{
+  max-height:0;overflow:hidden;
+  transition:max-height .45s var(--smooth);
+}
+.gbv-body.open{max-height:2000px}
 .gbv-card {
-  background:var(--card);border:1px solid var(--border);
-  border-radius:10px;padding:14px;margin-bottom:8px;
+  background:var(--card);border:1px solid rgba(168,85,247,.2);
+  border-radius:12px;padding:14px;margin-bottom:8px;
 }
-.gbv-card-head {
-  display:flex;align-items:center;gap:10px;margin-bottom:6px;
-}
+.gbv-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .gbv-card-icon {
-  width:32px;height:32px;border-radius:8px;
+  width:34px;height:34px;border-radius:9px;
   background:var(--gdim);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 .gbv-card h4{font-size:13px;font-weight:700;color:var(--t1)}
-.gbv-card p{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:6px}
+.gbv-card p{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:8px}
 .gbv-call {
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--gdim);border:1px solid var(--gbv);
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--gdim);border:1px solid rgba(168,85,247,.3);
   color:var(--gbv);font-size:12px;font-weight:700;
-  padding:6px 12px;border-radius:20px;
+  padding:7px 14px;border-radius:20px;
+  transition:transform .2s var(--spring),box-shadow .2s;
 }
+.gbv-call:active{transform:scale(.95)}
 
 /* Charts */
 .chart-wrap {
-  margin:0 16px 12px;
+  margin:0 16px 14px;
   background:var(--card);border-radius:var(--r);
-  border:1px solid var(--border);padding:16px;
+  border:1px solid var(--border);padding:18px;
 }
-.chart-wrap h3{font-size:13px;font-weight:700;margin-bottom:12px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px}
-.chart-wrap canvas{display:block}
+.chart-wrap h3{font-size:11px;font-weight:700;margin-bottom:14px;color:var(--t2);text-transform:uppercase;letter-spacing:.8px}
 
 /* Area scores */
-.area-list{padding:0 16px 12px}
+.area-list{padding:0 16px 14px}
 .area-item {
   display:flex;align-items:center;gap:12px;
-  padding:10px 0;border-bottom:1px solid var(--border);
+  padding:11px 0;border-bottom:1px solid var(--border);
 }
 .area-item:last-child{border-bottom:none}
 .area-name{font-size:13px;font-weight:600;flex:1;color:var(--t1)}
-.area-score{font-size:13px;font-weight:700}
+.area-score{font-size:13px;font-weight:800;min-width:36px;text-align:right}
 .area-bar-bg{flex:2;height:6px;background:var(--card2);border-radius:3px;overflow:hidden}
-.area-bar-fill{height:100%;border-radius:3px}
+.area-bar-fill{height:100%;border-radius:3px;transform-origin:left;transform:scaleX(0);transition:transform .8s var(--spring)}
+.area-bar-fill.animated{transform:scaleX(1)}
 
 /* Wanted */
-.wanted-grid {
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:8px;padding:0 16px 12px;
-}
-.wanted-card {
+.wanted-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 14px}
+.wanted-card{
   background:var(--card);border:1px solid var(--border);
-  border-radius:10px;overflow:hidden;
+  border-radius:12px;overflow:hidden;
+  transition:transform .2s var(--spring);
 }
+.wanted-card:active{transform:scale(.96)}
 .wanted-img {
   width:100%;height:80px;
-  background:linear-gradient(135deg,#333 0%,#555 100%);
+  background:linear-gradient(135deg,#1c1c26 0%,#252530 100%);
   display:flex;align-items:center;justify-content:center;
 }
-.wanted-info{padding:10px}
+.wanted-info{padding:10px 12px}
 .wanted-info h4{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px}
 .wanted-info p{font-size:10px;color:var(--t2)}
 .wanted-badge {
   font-size:9px;font-weight:700;letter-spacing:.4px;
   background:var(--ddim);color:var(--danger);
-  padding:2px 6px;border-radius:10px;display:inline-block;margin-top:4px;
+  padding:3px 7px;border-radius:10px;display:inline-block;margin-top:5px;
+  border:1px solid rgba(255,92,92,.2);
 }
 
-/* ── BOTTOM SHEET MODAL ───────────────────────────────────── */
+/* ── MODAL ───────────────────────────────────────────────── */
 #modal-overlay {
   position:fixed;inset:0;z-index:300;
-  background:rgba(0,0,0,.6);
+  background:rgba(0,0,0,.65);
   display:none;align-items:flex-end;
+  backdrop-filter:blur(4px);
 }
 #modal-overlay.open{display:flex}
 #modal-sheet {
-  width:100%;background:var(--surface);
-  border-radius:20px 20px 0 0;
+  width:100%;
+  background:var(--surface);
+  border-radius:22px 22px 0 0;
+  border-top:1px solid var(--border);
   max-height:80vh;overflow-y:auto;
-  padding:0 0 calc(20px + var(--safe-b));
-  animation:sheetUp .3s ease-out;
+  padding:0 0 calc(24px + var(--safe-b));
+  animation:sheetUp .38s var(--spring);
 }
-@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.modal-handle {
-  width:36px;height:4px;border-radius:2px;
-  background:var(--border);margin:12px auto;
-}
-#modal-title{font-size:17px;font-weight:700;padding:4px 20px 12px;color:var(--t1)}
+.modal-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:12px auto}
+#modal-title{font-size:17px;font-weight:800;padding:4px 20px 14px;color:var(--t1)}
 #modal-body{padding:0 20px}
 .modal-row {
   display:flex;align-items:center;gap:12px;
   padding:12px 0;border-bottom:1px solid var(--border);
+  transition:background .15s;
 }
 .modal-row:last-child{border-bottom:none}
 .modal-row-icon {
-  width:40px;height:40px;border-radius:10px;
+  width:40px;height:40px;border-radius:11px;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:var(--card);
 }
 .modal-row-info h4{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:1px}
 .modal-row-info p{font-size:11px;color:var(--t2)}
 .modal-call {
-  margin-left:auto;background:var(--adim);border:1px solid var(--accent);
+  margin-left:auto;
+  background:var(--adim);border:1px solid rgba(200,255,0,.25);
   color:var(--accent);font-size:12px;font-weight:700;
-  padding:6px 12px;border-radius:20px;flex-shrink:0;
+  padding:7px 13px;border-radius:20px;flex-shrink:0;
+  transition:transform .2s var(--spring);
+}
+.modal-call:active{transform:scale(.94)}
+
+/* ── MARKER PULSE ────────────────────────────────────────── */
+.marker-dot {
+  position:relative;
+  width:14px;height:14px;
+}
+.marker-dot::before {
+  content:'';
+  position:absolute;inset:0;
+  border-radius:50%;
+  animation:pulse-ring 2.5s ease-out infinite;
 }
 
-/* ── SCROLLBAR ───────────────────────────────────────────── */
-::-webkit-scrollbar{width:0}
+/* ── LEAFLET POPUP DARK ───────────────────────────────────── */
+.leaflet-popup-content-wrapper {
+  background:var(--surface) !important;
+  color:var(--t1) !important;
+  border:1px solid var(--border) !important;
+  border-radius:12px !important;
+  box-shadow:0 8px 32px rgba(0,0,0,.5) !important;
+}
+.leaflet-popup-tip { background:var(--surface) !important }
+.leaflet-popup-content { color:var(--t1) !important; font-size:13px !important }
 </style>
 </head>
 <body>
 
 <!-- TOP BAR -->
 <div id="top-bar">
-  <button id="btn-menu" onclick="openDrawer()" aria-label="Menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-    </svg>
+  <button class="bar-btn ripple-host" id="btn-menu" onclick="ripple(event);openDrawer()" aria-label="Menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
   <div id="bar-title">GeoBots</div>
-  <button id="btn-theme" onclick="toggleTheme()" aria-label="Toggle theme">
-    <svg id="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none">
-      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-    </svg>
-    <svg id="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-    </svg>
+  <button class="bar-btn ripple-host" id="btn-theme" onclick="ripple(event);toggleTheme()" aria-label="Toggle theme">
+    <svg id="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg id="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
   </button>
-  <button id="btn-locate" onclick="locateMe()" aria-label="Locate me">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-    </svg>
+  <button class="bar-btn ripple-host" id="btn-locate" onclick="ripple(event);locateMe()" aria-label="Locate me">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
   </button>
 </div>
 
@@ -525,25 +705,21 @@ a{color:inherit;text-decoration:none}
   <div id="map"></div>
   <div id="heat-banner">HEATMAP VIEW</div>
   <div id="map-fabs">
-    <button class="fab" id="fab-heat" onclick="goTab('heat')" title="Toggle heatmap">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor"/>
-      </svg>
+    <button class="fab ripple-host" id="fab-heat" onclick="ripple(event);goTab('heat')" title="Heatmap">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor"/></svg>
     </button>
-    <button class="fab" onclick="goTab('map')" title="Show markers">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>
-      </svg>
+    <button class="fab ripple-host" onclick="ripple(event);goTab('map')" title="Markers">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
     </button>
   </div>
   <div id="panic-strip">
-    <button class="pbtn pbtn-999" id="pm999" aria-label="Call 999">
-      <div class="pbtn-fill" id="pf-pm999"></div>
+    <button class="pbtn pbtn-999 ripple-host" id="pm999" aria-label="Call 999">
+      <div class="pbtn-fill" id="pf-pm999"><div class="pbtn-fill-bg"></div></div>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
       <span id="lbl-pm999">Hold to Call 999</span>
     </button>
-    <button class="pbtn pbtn-gbv" id="pmgbv" aria-label="GBV Hotline">
-      <div class="pbtn-fill" id="pf-pmgbv"></div>
+    <button class="pbtn pbtn-gbv ripple-host" id="pmgbv" aria-label="GBV Hotline">
+      <div class="pbtn-fill" id="pf-pmgbv"><div class="pbtn-fill-bg"></div></div>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8M8 16h8"/></svg>
       <span id="lbl-pmgbv">Hold — GBV Hotline 0800 600 111</span>
     </button>
@@ -552,13 +728,10 @@ a{color:inherit;text-decoration:none}
 
 <!-- SCREEN HOST -->
 <div id="screen-host">
-  <!-- MAP tab (transparent — map shows through) -->
   <div class="screen active" id="screen-map"></div>
-
-  <!-- HEAT tab (transparent) -->
   <div class="screen" id="screen-heat"></div>
 
-  <!-- REPORT tab -->
+  <!-- REPORT -->
   <div class="screen" id="screen-report">
     <div class="anon-banner">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -566,8 +739,7 @@ a{color:inherit;text-decoration:none}
     </div>
     <div class="form-card">
       <h3>Report a Crime</h3>
-      <div class="form-group">
-        <label>Crime Type</label>
+      <div class="form-group"><label>Crime Type</label>
         <select id="report-type">
           <option value="theft">Theft / Robbery</option>
           <option value="assault">Assault</option>
@@ -577,46 +749,38 @@ a{color:inherit;text-decoration:none}
           <option value="other">Other</option>
         </select>
       </div>
-      <div class="form-group">
-        <label>Description</label>
+      <div class="form-group"><label>Description</label>
         <textarea id="report-desc" placeholder="Briefly describe what happened…"></textarea>
       </div>
-      <div class="form-group">
-        <label>Location (tap map to pin, or describe)</label>
+      <div class="form-group"><label>Location (tap map to pin, or describe)</label>
         <input type="text" id="report-loc" placeholder="e.g. Gaborone CBD, near Game City">
       </div>
-      <button class="btn-submit" onclick="submitReport()">Submit Anonymous Report</button>
+      <button class="btn-submit ripple-host" onclick="ripple(event);submitReport()">Submit Anonymous Report</button>
     </div>
-    <div class="form-card">
+    <div class="form-card" style="animation-delay:.1s">
       <h3>Submit Anonymous Tip</h3>
-      <div class="anon-banner" style="margin:0 0 14px;border-radius:8px">
+      <div class="anon-banner" style="margin:0 0 16px;border-radius:9px">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         Anonymous — no personal data stored
       </div>
-      <div class="form-group">
-        <label>Category</label>
+      <div class="form-group"><label>Category</label>
         <select id="tip-cat">
-          <option value="theft">Theft</option>
-          <option value="assault">Assault</option>
-          <option value="gbv">GBV</option>
-          <option value="fraud">Fraud</option>
-          <option value="drugs">Drugs</option>
-          <option value="other">Other</option>
+          <option value="theft">Theft</option><option value="assault">Assault</option>
+          <option value="gbv">GBV</option><option value="fraud">Fraud</option>
+          <option value="drugs">Drugs</option><option value="other">Other</option>
         </select>
       </div>
-      <div class="form-group">
-        <label>Area / Location</label>
+      <div class="form-group"><label>Area / Location</label>
         <input type="text" id="tip-loc" placeholder="e.g. Broadhurst">
       </div>
-      <div class="form-group">
-        <label>Tip Details</label>
+      <div class="form-group"><label>Tip Details</label>
         <textarea id="tip-text" placeholder="What did you see or hear?"></textarea>
       </div>
-      <button class="btn-submit" onclick="submitTip()">Submit Tip</button>
+      <button class="btn-submit ripple-host" onclick="ripple(event);submitTip()">Submit Tip</button>
     </div>
   </div>
 
-  <!-- TIPS tab -->
+  <!-- TIPS -->
   <div class="screen" id="screen-tips">
     <div class="tips-bar">
       <h2>Community Tips</h2>
@@ -625,67 +789,60 @@ a{color:inherit;text-decoration:none}
     <div id="tips-feed"></div>
   </div>
 
-  <!-- SAFETY tab -->
+  <!-- SAFETY -->
   <div class="screen" id="screen-safety">
-    <!-- Panic buttons -->
     <div class="safety-panic-wrap">
-      <button class="safety-pbtn pbtn-999" id="ps999" aria-label="Call 999">
-        <div class="pbtn-fill" id="pf-ps999"></div>
+      <button class="safety-pbtn pbtn-999 ripple-host" id="ps999">
+        <div class="pbtn-fill" id="pf-ps999"><div class="pbtn-fill-bg"></div></div>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
         <span id="lbl-ps999">Hold to Call 999</span>
       </button>
-      <button class="safety-pbtn pbtn-gbv" id="psgbv" aria-label="GBV Hotline">
-        <div class="pbtn-fill" id="pf-psgbv"></div>
+      <button class="safety-pbtn pbtn-gbv ripple-host" id="psgbv">
+        <div class="pbtn-fill" id="pf-psgbv"><div class="pbtn-fill-bg"></div></div>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8M8 16h8"/></svg>
         <span id="lbl-psgbv">Hold — GBV Emergency 0800 600 111</span>
       </button>
     </div>
 
-    <!-- Stat pills -->
     <div class="stat-row">
-      <div class="stat-pill"><div class="s-val">247</div><div class="s-lbl">Total Reports</div></div>
-      <div class="stat-pill"><div class="s-val">38</div><div class="s-lbl">This Month</div></div>
-      <div class="stat-pill"><div class="s-val">5</div><div class="s-lbl">Hotspots</div></div>
-      <div class="stat-pill"><div class="s-val">64%</div><div class="s-lbl">Clearance Rate</div></div>
+      <div class="stat-pill"><div class="s-val" data-count="247">247</div><div class="s-lbl">Total Reports</div></div>
+      <div class="stat-pill"><div class="s-val" data-count="38">38</div><div class="s-lbl">This Month</div></div>
+      <div class="stat-pill"><div class="s-val" data-count="5">5</div><div class="s-lbl">Hotspots</div></div>
+      <div class="stat-pill"><div class="s-val" data-count="64" data-suffix="%">64%</div><div class="s-lbl">Clearance Rate</div></div>
     </div>
 
-    <!-- Safety resource cards -->
     <div class="section-head">Safety Resources</div>
     <div class="safety-grid">
-      <div class="s-card" onclick="openModal('emergency')">
-        <div class="s-card-icon" style="background:rgba(255,100,100,.15)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6464" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      <div class="s-card ripple-host" onclick="ripple(event);openModal('emergency')">
+        <div class="s-card-icon" style="background:rgba(255,92,92,.15)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF5C5C" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
         </div>
-        <h4>Emergency Contacts</h4>
-        <p>Police, ambulance, fire brigade</p>
+        <h4>Emergency Contacts</h4><p>Police, ambulance, fire brigade</p>
       </div>
-      <div class="s-card" onclick="openModal('police')">
+      <div class="s-card ripple-host" onclick="ripple(event);openModal('police')">
         <div class="s-card-icon" style="background:rgba(200,255,0,.12)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8FF00" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
-        <h4>Police Stations</h4>
-        <p>Nearest stations in Gaborone</p>
+        <h4>Police Stations</h4><p>Nearest stations in Gaborone</p>
       </div>
-      <div class="s-card" onclick="openModal('watch')">
+      <div class="s-card ripple-host" onclick="ripple(event);openModal('watch')">
         <div class="s-card-icon" style="background:rgba(59,130,246,.15)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         </div>
-        <h4>Community Watch</h4>
-        <p>Local neighbourhood groups</p>
+        <h4>Community Watch</h4><p>Local neighbourhood groups</p>
       </div>
-      <div class="s-card" onclick="openModal('prevention')">
+      <div class="s-card ripple-host" onclick="ripple(event);openModal('prevention')">
         <div class="s-card-icon" style="background:rgba(52,211,153,.15)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
-        <h4>Crime Prevention</h4>
-        <p>Safety tips and guidance</p>
+        <h4>Crime Prevention</h4><p>Safety tips and guidance</p>
       </div>
     </div>
 
-    <!-- GBV Resources collapsible -->
+    <!-- GBV Collapsible -->
     <div class="gbv-section">
       <div class="gbv-head" onclick="toggleGBV()">
-        <div class="s-card-icon" style="background:var(--gdim);width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--gdim);display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8M8 16h8"/></svg>
         </div>
         <h3>GBV Support Resources</h3>
@@ -699,39 +856,30 @@ a{color:inherit;text-decoration:none}
             <h4>BOCONGO GBV Hotline</h4>
           </div>
           <p>24/7 free support line for GBV survivors. Confidential counselling, referrals, and crisis response.</p>
-          <a href="tel:0800600111" class="gbv-call">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-            0800 600 111 — Free
-          </a>
+          <a href="tel:0800600111" class="gbv-call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>0800 600 111 — Free</a>
         </div>
         <div class="gbv-card">
           <div class="gbv-card-head">
             <div class="gbv-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></div>
             <h4>Gaborone Magistrate Court</h4>
           </div>
-          <p>Apply for a Protection Order (PO) against an abuser. Free to apply, same-day emergency orders available. Visit the Clerk of Court at Gaborone Magistrate Court, Khama Crescent.</p>
+          <p>Apply for a Protection Order against an abuser. Free to apply, same-day emergency orders available. Visit the Clerk of Court, Khama Crescent.</p>
         </div>
         <div class="gbv-card">
           <div class="gbv-card-head">
             <div class="gbv-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
             <h4>Stepping Stones International</h4>
           </div>
-          <p>Provides safe shelter, trauma counselling, legal aid, and reintegration support for GBV survivors and vulnerable youth in Botswana.</p>
-          <a href="tel:+26731333111" class="gbv-call">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-            +267 313 3311
-          </a>
+          <p>Safe shelter, trauma counselling, legal aid, and reintegration support for GBV survivors and vulnerable youth.</p>
+          <a href="tel:+26731333111" class="gbv-call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>+267 313 3311</a>
         </div>
         <div class="gbv-card">
           <div class="gbv-card-head">
             <div class="gbv-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
             <h4>Botswana Police GBV Unit</h4>
           </div>
-          <p>Dedicated GBV response unit within the Botswana Police Service. Officers trained to handle domestic violence and sexual offences with sensitivity. Available at all major stations.</p>
-          <a href="tel:999" class="gbv-call">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-            Call 999
-          </a>
+          <p>Dedicated GBV response unit within the Botswana Police Service. Officers trained for domestic violence and sexual offence cases.</p>
+          <a href="tel:999" class="gbv-call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call 999</a>
         </div>
         <div class="gbv-card">
           <div class="gbv-card-head">
@@ -739,30 +887,18 @@ a{color:inherit;text-decoration:none}
             <h4>Childline Botswana</h4>
           </div>
           <p>24/7 free helpline for children in distress, abuse, or danger. Confidential support for minors and caregivers.</p>
-          <a href="tel:116" class="gbv-call">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-            116 — Free for Minors
-          </a>
+          <a href="tel:116" class="gbv-call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>116 — Free for Minors</a>
         </div>
       </div>
     </div>
 
-    <!-- Charts -->
     <div class="section-head">Crime Analytics</div>
-    <div class="chart-wrap">
-      <h3>Crime Type Breakdown</h3>
-      <canvas id="chart-doughnut" height="200"></canvas>
-    </div>
-    <div class="chart-wrap">
-      <h3>Incidents by Region</h3>
-      <canvas id="chart-bar" height="200"></canvas>
-    </div>
+    <div class="chart-wrap"><h3>Crime Type Breakdown</h3><canvas id="chart-doughnut" height="200"></canvas></div>
+    <div class="chart-wrap"><h3>Incidents by Region</h3><canvas id="chart-bar" height="200"></canvas></div>
 
-    <!-- Area safety scores -->
     <div class="section-head">Area Safety Scores</div>
     <div class="area-list" id="area-list"></div>
 
-    <!-- Wanted persons -->
     <div class="section-head">Wanted Persons</div>
     <div class="wanted-grid" id="wanted-grid"></div>
   </div>
@@ -770,23 +906,23 @@ a{color:inherit;text-decoration:none}
 
 <!-- BOTTOM NAV -->
 <nav id="bottom-nav">
-  <div class="nav-item active" data-tab="map" onclick="goTab('map')">
+  <div class="nav-item active ripple-host" data-tab="map" onclick="ripple(event);goTab('map')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
     Map
   </div>
-  <div class="nav-item" data-tab="heat" onclick="goTab('heat')">
+  <div class="nav-item ripple-host" data-tab="heat" onclick="ripple(event);goTab('heat')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
     Heatmap
   </div>
-  <div class="nav-item" data-tab="report" onclick="goTab('report')">
+  <div class="nav-item ripple-host" data-tab="report" onclick="ripple(event);goTab('report')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
     Report
   </div>
-  <div class="nav-item" data-tab="tips" onclick="goTab('tips')">
+  <div class="nav-item ripple-host" data-tab="tips" onclick="ripple(event);goTab('tips')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
     Tips
   </div>
-  <div class="nav-item" data-tab="safety" onclick="goTab('safety')">
+  <div class="nav-item ripple-host" data-tab="safety" onclick="ripple(event);goTab('safety')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     Safety
   </div>
@@ -800,38 +936,20 @@ a{color:inherit;text-decoration:none}
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </div>
     <div class="drawer-name">Gaborone Resident</div>
-    <div class="drawer-sub">Anonymous User</div>
+    <div class="drawer-sub">Anonymous — Stay Safe</div>
   </div>
   <div class="drawer-nav">
-    <div class="drawer-item" onclick="closeDrawer();goTab('map')">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-      Crime Map
-    </div>
-    <div class="drawer-item" onclick="closeDrawer();goTab('heat')">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-      Heatmap
-    </div>
-    <div class="drawer-item" onclick="closeDrawer();goTab('report')">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Report Crime
-    </div>
-    <div class="drawer-item" onclick="closeDrawer();goTab('tips')">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      Community Tips
-    </div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('map')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Crime Map</div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('heat')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>Heatmap</div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('report')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Report Crime</div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('tips')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Community Tips</div>
     <div class="drawer-divider"></div>
-    <div class="drawer-item" onclick="closeDrawer();goTab('safety')">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Safety &amp; Resources
-    </div>
-    <div class="drawer-item" onclick="closeDrawer();openModal('emergency')">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6464" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-      Emergency Contacts
-    </div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('safety')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Safety &amp; Resources</div>
+    <div class="drawer-item" onclick="closeDrawer();openModal('emergency')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF5C5C" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Emergency Contacts</div>
   </div>
 </div>
 
-<!-- BOTTOM SHEET MODAL -->
+<!-- MODAL -->
 <div id="modal-overlay" onclick="closeModal()">
   <div id="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -840,21 +958,15 @@ a{color:inherit;text-decoration:none}
   </div>
 </div>
 
-<!-- SCRIPTS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// ── DATA ─────────────────────────────────────────────────────
+// ── DATA ───────────────────────────────────────────────────
 const crimeColors = {
-  theft:    '#f59e0b',
-  assault:  '#ef4444',
-  fraud:    '#8b5cf6',
-  vandalism:'#6b7280',
-  gbv:      '#9333ea',
-  drugs:    '#ec4899',
-  robbery:  '#dc2626',
-  other:    '#64748b'
+  theft:'#f59e0b', assault:'#ef4444', fraud:'#8b5cf6',
+  vandalism:'#6b7280', gbv:'#a855f7', drugs:'#ec4899',
+  robbery:'#dc2626', other:'#64748b'
 };
 
 const crimeMarkers = [
@@ -876,96 +988,108 @@ const safetyGrid = [
 ];
 
 const tipsData = [
-  {id:1, time:'2h ago', location:'Riverwalk', category:'theft',   text:'Noticed someone acting suspiciously around parked cars in the Riverwalk car park, circling the same vehicles multiple times.',verified:true,  upvotes:14,voted:false},
-  {id:2, time:'5h ago', location:'CBD',       category:'fraud',   text:'Two men in suits approaching people near the Standard Chartered ATM asking to help with card transactions. Avoid.',verified:true,  upvotes:31,voted:false},
-  {id:3, time:'1d ago', location:'Old Naledi',category:'assault', text:'Group of youth hanging around the corner of Lejara Road at night. Three incidents in the past week.',verified:false, upvotes:8, voted:false},
-  {id:4, time:'2d ago', location:'Broadhurst',category:'gbv',     text:'Repeated shouting and sounds of violence from a property on Phase 2. Please check on the residents.',verified:false, upvotes:5, voted:false},
-  {id:5, time:'3d ago', location:'Mogoditshane',category:'drugs', text:'Unusual foot traffic at an abandoned plot near the main road late at night. Multiple nights in a row.',verified:true,  upvotes:19,voted:false},
+  {id:1,time:'2h ago',location:'Riverwalk',category:'theft',  text:'Someone acting suspiciously around parked cars in the Riverwalk car park, circling the same vehicles multiple times.',verified:true, upvotes:14,voted:false},
+  {id:2,time:'5h ago',location:'CBD',      category:'fraud',  text:'Two men in suits approaching people near the Standard Chartered ATM asking to help with card transactions. Avoid.',verified:true, upvotes:31,voted:false},
+  {id:3,time:'1d ago', location:'Old Naledi',category:'assault',text:'Group of youth on the corner of Lejara Road at night. Three incidents in the past week.',verified:false,upvotes:8, voted:false},
+  {id:4,time:'2d ago', location:'Broadhurst',category:'gbv',  text:'Repeated shouting and sounds of violence from a property on Phase 2. Please check on the residents.',verified:false,upvotes:5, voted:false},
+  {id:5,time:'3d ago', location:'Mogoditshane',category:'drugs',text:'Unusual foot traffic at an abandoned plot near the main road late at night. Multiple nights in a row.',verified:true, upvotes:19,voted:false},
 ];
 
 const emergencyContacts = [
-  {name:'Botswana Police',  number:'999',          note:'Emergency response'},
-  {name:'Ambulance / EMS',  number:'997',          note:'Medical emergency'},
-  {name:'Fire Brigade',     number:'998',          note:'Fire & rescue'},
-  {name:'BPS Headquarters', number:'+267 363 3999', note:'Non-emergency'},
-  {name:'GBV Hotline',      number:'0800 600 111', note:'Free 24/7'},
+  {name:'Botswana Police',  number:'999',           note:'Emergency response'},
+  {name:'Ambulance / EMS',  number:'997',           note:'Medical emergency'},
+  {name:'Fire Brigade',     number:'998',           note:'Fire & rescue'},
+  {name:'BPS Headquarters', number:'+267 363 3999', note:'Non-emergency line'},
+  {name:'GBV Hotline',      number:'0800 600 111',  note:'Free 24/7'},
 ];
 
 const policeStations = [
-  {name:'Gaborone Central Police Station', number:'+267 3953555', note:'CBD, Khama Crescent'},
-  {name:'Broadhurst Police Station',       number:'+267 3909555', note:'Plot 5830, Broadhurst'},
-  {name:'Gaborone West Police Station',    number:'+267 3931555', note:'Old Naledi area'},
-  {name:'Mogoditshane Police Station',     number:'+267 3989555', note:'Mogoditshane village'},
+  {name:'Gaborone Central',   number:'+267 3953555', note:'CBD, Khama Crescent'},
+  {name:'Broadhurst Station', number:'+267 3909555', note:'Plot 5830, Broadhurst'},
+  {name:'Gaborone West',      number:'+267 3931555', note:'Old Naledi area'},
+  {name:'Mogoditshane',       number:'+267 3989555', note:'Mogoditshane village'},
 ];
 
 const wantedPersons = [
-  {name:'Unknown Male',    crime:'Armed Robbery',   age:'25-35'},
-  {name:'Unknown Female',  crime:'Fraud',            age:'30-40'},
-  {name:'Unknown Male',    crime:'Assault',          age:'20-30'},
-  {name:'Unknown Male',    crime:'Vehicle Theft',    age:'18-25'},
+  {name:'Unknown Male',   crime:'Armed Robbery', age:'25-35'},
+  {name:'Unknown Female', crime:'Fraud',          age:'30-40'},
+  {name:'Unknown Male',   crime:'Assault',        age:'20-30'},
+  {name:'Unknown Male',   crime:'Vehicle Theft',  age:'18-25'},
 ];
 
-// ── MAP INIT ──────────────────────────────────────────────────
+// ── RIPPLE ────────────────────────────────────────────────
+function ripple(e) {
+  const btn = e.currentTarget;
+  const r = btn.getBoundingClientRect();
+  const size = Math.max(r.width, r.height) * 1.4;
+  const x = (e.clientX || r.left + r.width/2) - r.left - size/2;
+  const y = (e.clientY || r.top + r.height/2) - r.top - size/2;
+  const wave = document.createElement('span');
+  wave.className = 'ripple-wave';
+  wave.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px`;
+  btn.appendChild(wave);
+  wave.addEventListener('animationend', () => wave.remove());
+}
+
+// ── MAP ───────────────────────────────────────────────────
 let map, tileLayer, markersGroup, heatLayer;
-let heatOn = false;
 const mapLayer = document.getElementById('map-layer');
 
 function addTile(light) {
   if (tileLayer) { tileLayer.remove(); tileLayer = null; }
   const url = light
-    ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png'
-    : 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
+    ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
   tileLayer = L.tileLayer(url, {
-    attribution:'© <a href="https://stamen.com">Stadia Maps</a> © <a href="https://openmaptiles.org">OpenMapTiles</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    subdomains:'abcd',
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom:20
   });
   tileLayer.addTo(map);
 }
 
-function initMap() {
-  map = L.map('map', {zoomControl:false, attributionControl:true}).setView([-24.653,25.906], 13);
-  addTile(isLight());
+function makePulseIcon(color) {
+  return L.divIcon({
+    className:'',
+    html:`<div style="position:relative;width:18px;height:18px">
+      <div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:.25;animation:pulse-ring 2.5s ease-out infinite"></div>
+      <div style="position:absolute;inset:3px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.5)"></div>
+    </div>`,
+    iconSize:[18,18], iconAnchor:[9,9]
+  });
+}
 
+function initMap() {
+  map = L.map('map', {zoomControl:false, attributionControl:true}).setView([-24.653,25.906],13);
+  addTile(isLight());
   L.control.zoom({position:'topright'}).addTo(map);
 
   markersGroup = L.layerGroup().addTo(map);
   crimeMarkers.forEach(c => {
-    const color = crimeColors[c.type] || '#64748b';
-    const icon = L.divIcon({
-      className:'',
-      html:`<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,.6);box-shadow:0 0 6px rgba(0,0,0,.5)"></div>`,
-      iconSize:[14,14], iconAnchor:[7,7]
-    });
-    L.marker(c.coords, {icon}).addTo(markersGroup)
-     .bindPopup(`<b style="text-transform:capitalize">${c.type}</b><br>${c.desc}`,{className:'leaflet-popup-dark'});
+    L.marker(c.coords, {icon: makePulseIcon(crimeColors[c.type]||'#64748b')})
+     .addTo(markersGroup)
+     .bindPopup(`<b style="text-transform:capitalize;color:${crimeColors[c.type]||'#64748b'}">${c.type}</b><br>${c.desc}`);
   });
 
-  const intensityMap = {theft:0.7,assault:0.9,fraud:0.5,vandalism:0.4,gbv:0.85,drugs:0.6,robbery:0.95,other:0.4};
-  const baseHeat = crimeMarkers.map(c => [c.coords[0], c.coords[1], intensityMap[c.type]||0.5]);
-  const synth = [
-    [-24.660,25.920,0.6],[-24.645,25.910,0.5],[-24.630,25.935,0.4],
-    [-24.670,25.900,0.7],[-24.625,25.915,0.3],[-24.655,25.935,0.5],[-24.680,25.925,0.4]
-  ];
+  const intMap = {theft:.7,assault:.9,fraud:.5,vandalism:.4,gbv:.85,drugs:.6,robbery:.95,other:.4};
+  const baseHeat = crimeMarkers.map(c => [c.coords[0],c.coords[1],intMap[c.type]||.5]);
+  const synth = [[-24.660,25.920,.6],[-24.645,25.910,.5],[-24.630,25.935,.4],[-24.670,25.900,.7],[-24.625,25.915,.3],[-24.655,25.935,.5],[-24.680,25.925,.4]];
   heatLayer = L.heatLayer([...baseHeat,...synth], {
-    radius:30, blur:20, maxZoom:16,
+    radius:32, blur:22, maxZoom:16,
     gradient:{'0.0':'#0000ff','0.3':'#00ffff','0.55':'#00ff00','0.75':'#ffff00','1.0':'#ff0000'}
   });
 
-  // Long-press to report on map
+  // Long-press to report
   let pressTimer;
-  let pressCoords;
   map.on('contextmenu', e => startMapReport(e.latlng));
   map.getContainer().addEventListener('touchstart', e => {
-    pressCoords = null;
     pressTimer = setTimeout(() => {
-      pressCoords = map.containerPointToLatLng(
-        L.point(e.touches[0].clientX - map.getContainer().getBoundingClientRect().left,
-                e.touches[0].clientY - map.getContainer().getBoundingClientRect().top)
-      );
-      startMapReport(pressCoords);
+      const rect = map.getContainer().getBoundingClientRect();
+      const latlng = map.containerPointToLatLng(L.point(e.touches[0].clientX-rect.left, e.touches[0].clientY-rect.top));
+      startMapReport(latlng);
     }, 800);
   }, {passive:true});
-  map.getContainer().addEventListener('touchend', () => clearTimeout(pressTimer), {passive:true});
+  map.getContainer().addEventListener('touchend',  () => clearTimeout(pressTimer), {passive:true});
   map.getContainer().addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
 }
 
@@ -974,58 +1098,45 @@ function startMapReport(latlng) {
   document.getElementById('report-loc').value = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
 }
 
-function enableHeat() {
-  heatLayer.addTo(map);
-  markersGroup.remove();
-  heatOn = true;
-}
-function disableHeat() {
-  heatLayer.remove();
-  markersGroup.addTo(map);
-  heatOn = false;
-}
+function enableHeat()  { heatLayer.addTo(map); markersGroup.remove(); }
+function disableHeat() { heatLayer.remove(); markersGroup.addTo(map); }
 
 function locateMe() {
   if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(pos => {
-    map.setView([pos.coords.latitude, pos.coords.longitude], 15);
-  });
+  navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 15));
 }
 
-// ── TAB SWITCHING ─────────────────────────────────────────────
+// ── TABS ──────────────────────────────────────────────────
 function goTab(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => {
+    if (s.classList.contains('active')) s.classList.remove('active');
+  });
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('screen-'+id).classList.add('active');
+
+  const screen = document.getElementById('screen-'+id);
+  screen.classList.add('active','entering');
+  screen.addEventListener('animationend', () => screen.classList.remove('entering'), {once:true});
+
   document.querySelector(`[data-tab="${id}"]`).classList.add('active');
 
-  const mapScreens = id === 'map' || id === 'heat';
-  mapLayer.style.zIndex = mapScreens ? '1' : '-1';
+  const onMap = id==='map'||id==='heat';
+  mapLayer.style.zIndex = onMap ? '1' : '-1';
+  document.getElementById('panic-strip').style.display = onMap ? 'flex' : 'none';
 
-  const panicStrip = document.getElementById('panic-strip');
   const heatBanner = document.getElementById('heat-banner');
   const fabHeat    = document.getElementById('fab-heat');
-
-  if (mapScreens) {
-    panicStrip.style.display = 'flex';
+  if (id==='heat') {
+    enableHeat(); heatBanner.style.display='block'; fabHeat.classList.add('active');
   } else {
-    panicStrip.style.display = 'none';
+    disableHeat(); heatBanner.style.display='none'; fabHeat.classList.remove('active');
   }
 
-  if (id === 'heat') {
-    enableHeat();
-    heatBanner.style.display = 'block';
-    fabHeat.classList.add('active');
-  } else {
-    disableHeat();
-    heatBanner.style.display = 'none';
-    fabHeat.classList.remove('active');
-  }
-
+  if (id==='safety') animateStats();
+  if (id==='tips')   renderTips();
   setTimeout(() => map.invalidateSize(), 60);
 }
 
-// ── DRAWER ────────────────────────────────────────────────────
+// ── DRAWER ────────────────────────────────────────────────
 function openDrawer() {
   document.getElementById('drawer').classList.add('open');
   document.getElementById('drawer-overlay').classList.add('visible');
@@ -1035,193 +1146,146 @@ function closeDrawer() {
   document.getElementById('drawer-overlay').classList.remove('visible');
 }
 
-// ── PANIC BUTTON (hold-to-confirm 2s) ─────────────────────────
-function setupPanic(btnId, fillId, lblId, phone, defaultLabel) {
+// ── PANIC (hold 2s) ───────────────────────────────────────
+function setupPanic(btnId, fillId, lblId, phone, defaultLbl) {
   const btn  = document.getElementById(btnId);
   const fill = document.getElementById(fillId);
   const lbl  = document.getElementById(lblId);
   if (!btn) return;
-  let raf, startTime, holding = false;
+  let raf, t0, holding=false;
 
-  function startHold(e) {
+  function start(e) {
     e.preventDefault();
     if (holding) return;
-    holding = true;
-    startTime = performance.now();
-    lbl.textContent = 'Keep holding…';
-
-    function tick() {
+    holding=true; t0=performance.now();
+    lbl.textContent='Keep holding…';
+    (function tick() {
       if (!holding) return;
-      const pct = Math.min((performance.now() - startTime) / 2000, 1);
-      fill.style.width = (pct * 100) + '%';
-      if (pct >= 1) {
-        lbl.textContent = 'Calling…';
-        fill.style.width = '100%';
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(() => {});
-        }
-        setTimeout(() => { window.location.href = 'tel:' + phone; }, 200);
-        reset();
-        return;
+      const p = Math.min((performance.now()-t0)/2000,1);
+      fill.style.width = (p*100)+'%';
+      if (p>=1) {
+        lbl.textContent='Calling…';
+        navigator.geolocation && navigator.geolocation.getCurrentPosition(()=>{});
+        setTimeout(()=>{ window.location.href='tel:'+phone; },200);
+        reset(); return;
       }
       raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
+    })();
   }
-
   function reset() {
-    holding = false;
-    cancelAnimationFrame(raf);
-    fill.style.width = '0%';
-    lbl.textContent = defaultLabel;
+    holding=false; cancelAnimationFrame(raf);
+    fill.style.width='0%'; lbl.textContent=defaultLbl;
   }
-
-  btn.addEventListener('pointerdown',   startHold, {passive:false});
+  btn.addEventListener('pointerdown',   start, {passive:false});
   btn.addEventListener('pointerup',     reset);
   btn.addEventListener('pointerleave',  reset);
   btn.addEventListener('pointercancel', reset);
 }
 
-// ── THEME ─────────────────────────────────────────────────────
-function isLight() { return document.documentElement.classList.contains('light'); }
+// ── THEME ─────────────────────────────────────────────────
+function isLight() { return document.documentElement.classList.contains('light') }
 
 function toggleTheme() {
   const light = !isLight();
   document.documentElement.classList.toggle('light', light);
-  localStorage.setItem('theme', light ? 'light' : 'dark');
-  document.getElementById('icon-sun').style.display  = light ? 'block' : 'none';
-  document.getElementById('icon-moon').style.display = light ? 'none'  : 'block';
+  localStorage.setItem('theme', light?'light':'dark');
+  document.getElementById('icon-sun').style.display  = light?'block':'none';
+  document.getElementById('icon-moon').style.display = light?'none':'block';
   addTile(light);
-  if (window.barChart) updateChartColors();
+  if (window.doughnutChart) updateChartColors();
 }
 
 function applyStoredTheme() {
-  const stored = localStorage.getItem('theme');
-  if (stored === 'light') {
+  if (localStorage.getItem('theme')==='light') {
     document.documentElement.classList.add('light');
     document.getElementById('icon-sun').style.display  = 'block';
     document.getElementById('icon-moon').style.display = 'none';
   }
 }
 
-// ── MODAL ─────────────────────────────────────────────────────
+// ── MODAL ─────────────────────────────────────────────────
 const modalData = {
-  emergency: {
-    title:'Emergency Contacts',
-    rows: emergencyContacts.map(c => ({name:c.name, sub:c.note, call:c.number}))
-  },
-  police: {
-    title:'Police Stations',
-    rows: policeStations.map(s => ({name:s.name, sub:s.note, call:s.number}))
-  },
-  watch: {
-    title:'Community Watch',
-    rows:[
-      {name:'Block Watch Gaborone',    sub:'Voluntary neighbourhood watch', call:'999'},
-      {name:'CBD Business Watch',       sub:'Business security network', call:'999'},
-      {name:'Residential Safety Group', sub:'Report suspicious activity', call:'999'},
-    ]
-  },
-  prevention: {
-    title:'Crime Prevention Tips',
-    rows:[
-      {name:'Lock Your Vehicle',     sub:'Always lock up and hide valuables'},
-      {name:'Travel in Groups',       sub:'Especially after dark'},
-      {name:'Report Suspicious Activity', sub:'Call 999 immediately'},
-      {name:'Secure Your Home',       sub:'Locks, lights, alarm systems'},
-    ]
-  }
+  emergency:{title:'Emergency Contacts',rows:emergencyContacts.map(c=>({name:c.name,sub:c.note,call:c.number}))},
+  police:{title:'Police Stations',rows:policeStations.map(s=>({name:s.name,sub:s.note,call:s.number}))},
+  watch:{title:'Community Watch',rows:[
+    {name:'Block Watch Gaborone',sub:'Voluntary neighbourhood watch',call:'999'},
+    {name:'CBD Business Watch',sub:'Business security network',call:'999'},
+    {name:'Residential Safety Group',sub:'Report suspicious activity',call:'999'},
+  ]},
+  prevention:{title:'Crime Prevention Tips',rows:[
+    {name:'Lock Your Vehicle',sub:'Hide valuables, always lock up'},
+    {name:'Travel in Groups',sub:'Especially after dark'},
+    {name:'Report Suspicious Activity',sub:'Call 999 immediately'},
+    {name:'Secure Your Home',sub:'Locks, lights, alarm systems'},
+  ]}
 };
 
 function openModal(key) {
-  const d = modalData[key];
-  if (!d) return;
+  const d = modalData[key]; if (!d) return;
   document.getElementById('modal-title').textContent = d.title;
-  document.getElementById('modal-body').innerHTML = d.rows.map(r => `
+  document.getElementById('modal-body').innerHTML = d.rows.map(r=>`
     <div class="modal-row">
-      <div class="modal-row-icon" style="background:var(--card)">
+      <div class="modal-row-icon">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
-      <div class="modal-row-info">
-        <h4>${r.name}</h4>
-        <p>${r.sub || ''}</p>
-      </div>
-      ${r.call ? `<a href="tel:${r.call.replace(/\s/g,'')}" class="modal-call">${r.call}</a>` : ''}
+      <div class="modal-row-info"><h4>${r.name}</h4><p>${r.sub||''}</p></div>
+      ${r.call?`<a href="tel:${r.call.replace(/\s/g,'')}" class="modal-call">${r.call}</a>`:''}
     </div>
   `).join('');
   document.getElementById('modal-overlay').classList.add('open');
 }
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open') }
 
-// ── GBV COLLAPSIBLE ───────────────────────────────────────────
+// ── GBV ACCORDION ────────────────────────────────────────
 function toggleGBV() {
-  const body    = document.getElementById('gbv-body');
-  const chevron = document.getElementById('gbv-chevron');
-  body.classList.toggle('open');
-  chevron.classList.toggle('open');
+  document.getElementById('gbv-body').classList.toggle('open');
+  document.getElementById('gbv-chevron').classList.toggle('open');
 }
 
-// ── TIPS FEED ─────────────────────────────────────────────────
-function timeAgo(str) { return str; }
-
+// ── TIPS ─────────────────────────────────────────────────
 function renderTips() {
   const feed = document.getElementById('tips-feed');
-  document.getElementById('tips-count').textContent = tipsData.length + ' tips';
-  feed.innerHTML = tipsData.map(t => {
-    const color = crimeColors[t.category] || '#64748b';
-    return `
-      <div class="tip-card">
-        <div class="tip-top">
-          <span class="tip-badge" style="background:${color}22;color:${color}">${t.category}</span>
-          ${t.verified ? `<span class="tip-verified"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Verified</span>` : ''}
-        </div>
-        <div class="tip-meta">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          ${t.time}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2" fill="currentColor"/></svg>
-          ${t.location}
-        </div>
-        <div class="tip-text">${t.text}</div>
-        <div class="tip-foot">
-          <button class="tip-upvote ${t.voted?'voted':''}" onclick="upvote(${t.id})">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="${t.voted?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
-            ${t.upvotes}
-          </button>
-        </div>
+  document.getElementById('tips-count').textContent = tipsData.length+' tips';
+  feed.innerHTML = tipsData.map((t,i) => {
+    const color = crimeColors[t.category]||'#64748b';
+    return `<div class="tip-card" style="animation:fadeUp .4s var(--spring) ${i*0.07}s both">
+      <div class="tip-top">
+        <span class="tip-badge" style="background:${color}22;color:${color}">${t.category}</span>
+        ${t.verified?`<span class="tip-verified"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>`:''}
       </div>
-    `;
+      <div class="tip-meta">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${t.time}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2" fill="currentColor"/></svg>${t.location}
+      </div>
+      <div class="tip-text">${t.text}</div>
+      <div class="tip-foot">
+        <button class="tip-upvote ripple-host ${t.voted?'voted':''}" onclick="ripple(event);upvote(${t.id})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="${t.voted?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
+          ${t.upvotes}
+        </button>
+      </div>
+    </div>`;
   }).join('');
 }
 
 function upvote(id) {
-  const tip = tipsData.find(t => t.id === id);
-  if (!tip || tip.voted) return;
-  tip.voted = true;
-  tip.upvotes++;
-  renderTips();
+  const t = tipsData.find(x=>x.id===id);
+  if (!t||t.voted) return;
+  t.voted=true; t.upvotes++; renderTips();
 }
 
-// ── REPORT SUBMIT ─────────────────────────────────────────────
+// ── REPORT ────────────────────────────────────────────────
 function submitReport() {
   const type = document.getElementById('report-type').value;
   const desc = document.getElementById('report-desc').value.trim();
   const loc  = document.getElementById('report-loc').value.trim();
   if (!desc) { alert('Please add a description.'); return; }
-
-  const coords = parseCoords(loc) || [-24.653, 25.906];
-  const color = crimeColors[type] || '#64748b';
-  const icon = L.divIcon({
-    className:'',
-    html:`<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,.6);box-shadow:0 0 6px rgba(0,0,0,.5)"></div>`,
-    iconSize:[14,14], iconAnchor:[7,7]
-  });
-  L.marker(coords, {icon}).addTo(markersGroup)
-   .bindPopup(`<b style="text-transform:capitalize">${type}</b><br>${desc}`);
-
-  document.getElementById('report-desc').value = '';
-  document.getElementById('report-loc').value  = '';
+  const coords = parseCoords(loc) || [-24.653,25.906];
+  L.marker(coords, {icon: makePulseIcon(crimeColors[type]||'#64748b')})
+   .addTo(markersGroup)
+   .bindPopup(`<b style="text-transform:capitalize;color:${crimeColors[type]||'#64748b'}">${type}</b><br>${desc}`);
+  document.getElementById('report-desc').value='';
+  document.getElementById('report-loc').value='';
   goTab('map');
 }
 
@@ -1230,110 +1294,130 @@ function submitTip() {
   const loc  = document.getElementById('tip-loc').value.trim();
   const text = document.getElementById('tip-text').value.trim();
   if (!text) { alert('Please describe the tip.'); return; }
-
-  tipsData.unshift({
-    id: Date.now(), time:'Just now',
-    location: loc || 'Gaborone', category: cat,
-    text, verified:false, upvotes:0, voted:false
-  });
-
-  document.getElementById('tip-cat').value   = 'theft';
-  document.getElementById('tip-loc').value   = '';
-  document.getElementById('tip-text').value  = '';
-  renderTips();
-  goTab('tips');
+  tipsData.unshift({id:Date.now(),time:'Just now',location:loc||'Gaborone',category:cat,text,verified:false,upvotes:0,voted:false});
+  document.getElementById('tip-cat').value='theft';
+  document.getElementById('tip-loc').value='';
+  document.getElementById('tip-text').value='';
+  renderTips(); goTab('tips');
 }
 
-function parseCoords(str) {
-  const m = str.match(/([-\d.]+)\s*,\s*([-\d.]+)/);
-  return m ? [parseFloat(m[1]), parseFloat(m[2])] : null;
+function parseCoords(s) {
+  const m = s.match(/([-\d.]+)\s*,\s*([-\d.]+)/);
+  return m ? [parseFloat(m[1]),parseFloat(m[2])] : null;
 }
 
-// ── AREA SCORES ───────────────────────────────────────────────
+// ── AREA SCORES ───────────────────────────────────────────
 function renderAreas() {
-  document.getElementById('area-list').innerHTML = safetyGrid.map(a => `
+  document.getElementById('area-list').innerHTML = safetyGrid.map(a=>`
     <div class="area-item">
       <div class="area-name">${a.area}</div>
-      <div class="area-bar-bg"><div class="area-bar-fill" style="width:${a.score}%;background:${a.color}"></div></div>
+      <div class="area-bar-bg"><div class="area-bar-fill" data-w="${a.score/100}" style="background:${a.color}"></div></div>
       <div class="area-score" style="color:${a.color}">${a.score}%</div>
     </div>
   `).join('');
 }
 
-// ── WANTED ────────────────────────────────────────────────────
+function animateAreaBars() {
+  document.querySelectorAll('.area-bar-fill').forEach(el => {
+    el.style.setProperty('--tw',el.dataset.w);
+    el.classList.add('animated');
+  });
+}
+
+// ── WANTED ────────────────────────────────────────────────
 function renderWanted() {
-  document.getElementById('wanted-grid').innerHTML = wantedPersons.map(w => `
+  document.getElementById('wanted-grid').innerHTML = wantedPersons.map(w=>`
     <div class="wanted-card">
-      <div class="wanted-img">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </div>
-      <div class="wanted-info">
-        <h4>${w.name}</h4>
-        <p>Age: ${w.age}</p>
-        <span class="wanted-badge">${w.crime}</span>
-      </div>
+      <div class="wanted-img"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="wanted-info"><h4>${w.name}</h4><p>Age: ${w.age}</p><span class="wanted-badge">${w.crime}</span></div>
     </div>
   `).join('');
 }
 
-// ── CHARTS ────────────────────────────────────────────────────
+// ── STAT COUNT-UP ─────────────────────────────────────────
+let statsAnimated = false;
+function animateStats() {
+  if (statsAnimated) { animateAreaBars(); return; }
+  statsAnimated = true;
+  document.querySelectorAll('.s-val[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.count);
+    const suffix = el.dataset.suffix||'';
+    let start = 0;
+    const dur = 900;
+    const t0 = performance.now();
+    (function tick(now) {
+      const p = Math.min((now-t0)/dur,1);
+      const ease = 1-Math.pow(1-p,3);
+      el.textContent = Math.round(ease*target)+suffix;
+      if (p<1) requestAnimationFrame(tick);
+    })(performance.now());
+  });
+  setTimeout(animateAreaBars, 200);
+}
+
+// ── CHARTS ────────────────────────────────────────────────
 let doughnutChart, barChart;
 function initCharts() {
-  Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--t2').trim() || '#8A8A8A';
+  const tc = isLight() ? '#6060a0' : '#7878a0';
+  const gc = isLight() ? 'rgba(0,0,0,.06)' : 'rgba(255,255,255,.06)';
 
-  const dCtx = document.getElementById('chart-doughnut').getContext('2d');
-  doughnutChart = new Chart(dCtx, {
+  doughnutChart = new Chart(document.getElementById('chart-doughnut').getContext('2d'), {
     type:'doughnut',
     data:{
       labels:['Theft','Assault','Fraud','Vandalism','Other'],
-      datasets:[{data:[35,25,20,12,8],backgroundColor:['#f59e0b','#ef4444','#8b5cf6','#6b7280','#64748b'],borderWidth:0}]
+      datasets:[{
+        data:[35,25,20,12,8],
+        backgroundColor:['#f59e0b','#ef4444','#8b5cf6','#6b7280','#64748b'],
+        borderWidth:0, hoverOffset:6
+      }]
     },
-    options:{plugins:{legend:{position:'bottom',labels:{color:'var(--t2)',boxWidth:12,padding:12}}},cutout:'65%'}
+    options:{
+      animation:{duration:1000,easing:'easeOutQuart'},
+      plugins:{legend:{position:'bottom',labels:{color:tc,boxWidth:12,padding:14,borderRadius:4}}},
+      cutout:'65%'
+    }
   });
 
-  const bCtx = document.getElementById('chart-bar').getContext('2d');
-  barChart = new Chart(bCtx, {
+  barChart = new Chart(document.getElementById('chart-bar').getContext('2d'), {
     type:'bar',
     data:{
       labels:['CBD','Broadhurst','Old Naledi','Mogoditshane','Tlokweng'],
       datasets:[{
         label:'Incidents',
         data:[120,85,60,45,40],
-        backgroundColor:'rgba(200,255,0,0.25)',
+        backgroundColor:'rgba(200,255,0,.2)',
         borderColor:'#C8FF00',
         borderWidth:2,
-        borderRadius:6
+        borderRadius:8,
+        hoverBackgroundColor:'rgba(200,255,0,.35)'
       }]
     },
     options:{
+      animation:{duration:1000,easing:'easeOutQuart'},
       plugins:{legend:{display:false}},
       scales:{
-        x:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'var(--t2)'}},
-        y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'var(--t2)'}}
+        x:{grid:{color:gc},ticks:{color:tc}},
+        y:{grid:{color:gc},ticks:{color:tc}}
       }
     }
   });
 }
 
 function updateChartColors() {
-  const tc = isLight() ? '#666' : '#8A8A8A';
+  const tc = isLight() ? '#6060a0' : '#7878a0';
   const gc = isLight() ? 'rgba(0,0,0,.06)' : 'rgba(255,255,255,.06)';
-  [doughnutChart, barChart].forEach(c => {
+  [doughnutChart,barChart].forEach(c=>{
     if (!c) return;
-    if (c.options.plugins && c.options.plugins.legend) {
-      c.options.plugins.legend.labels.color = tc;
-    }
-    if (c.options.scales) {
-      Object.values(c.options.scales).forEach(ax => {
-        if (ax.ticks)  ax.ticks.color = tc;
-        if (ax.grid)   ax.grid.color  = gc;
-      });
-    }
+    if (c.options.plugins?.legend) c.options.plugins.legend.labels.color=tc;
+    if (c.options.scales) Object.values(c.options.scales).forEach(ax=>{
+      if (ax.ticks) ax.ticks.color=tc;
+      if (ax.grid)  ax.grid.color=gc;
+    });
     c.update();
   });
 }
 
-// ── BOOT ─────────────────────────────────────────────────────
+// ── BOOT ──────────────────────────────────────────────────
 applyStoredTheme();
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
@@ -1341,10 +1425,10 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAreas();
   renderWanted();
   initCharts();
-  setupPanic('pm999',  'pf-pm999',  'lbl-pm999',  '999',        'Hold to Call 999');
-  setupPanic('pmgbv',  'pf-pmgbv',  'lbl-pmgbv',  '0800600111', 'Hold — GBV Hotline 0800 600 111');
-  setupPanic('ps999',  'pf-ps999',  'lbl-ps999',  '999',        'Hold to Call 999');
-  setupPanic('psgbv',  'pf-psgbv',  'lbl-psgbv',  '0800600111', 'Hold — GBV Emergency 0800 600 111');
+  setupPanic('pm999','pf-pm999','lbl-pm999','999',       'Hold to Call 999');
+  setupPanic('pmgbv','pf-pmgbv','lbl-pmgbv','0800600111','Hold — GBV Hotline 0800 600 111');
+  setupPanic('ps999','pf-ps999','lbl-ps999','999',       'Hold to Call 999');
+  setupPanic('psgbv','pf-psgbv','lbl-psgbv','0800600111','Hold — GBV Emergency 0800 600 111');
   goTab('map');
 });
 </script>
