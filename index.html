@@ -1,2063 +1,1436 @@
-<html lang="en"><head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoBots Crime Mapping - Botswana</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-    <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --primary-light: #dbeafe;
-            --secondary: #ef4444;
-            --secondary-light: #fee2e2;
-            --accent: #10b981;
-            --accent-light: #d1fae5;
-            --warning: #f59e0b;
-            --warning-light: #fef3c7;
-            --background: #f9fafb;
-            --surface: #ffffff;
-            --text: #1f2937;
-            --text-secondary: #6b7280;
-            --border: #e5e7eb;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            --radius: 12px;
-            --header-height: 80px;
-        }
-
-        .dark {
-            --primary: #60a5fa;
-            --primary-dark: #3b82f6;
-            --primary-light: #1e3a8a;
-            --secondary: #f87171;
-            --secondary-light: #7f1d1d;
-            --accent: #34d399;
-            --accent-light: #065f46;
-            --warning: #fbbf24;
-            --warning-light: #92400e;
-            --background: #0f172a;
-            --surface: #1e293b;
-            --text: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --border: #334155;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--background);
-            color: var(--text);
-            transition: var(--transition);
-            line-height: 1.6;
-            overflow-x: hidden;
-            scroll-behavior: smooth;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1.5rem;
-        }
-
-        section {
-            padding: 5rem 0;
-        }
-
-        h1, h2, h3, h4 {
-            font-weight: 700;
-            line-height: 1.2;
-        }
-
-        h1 {
-            font-size: 3.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        h2 {
-            font-size: 2.5rem;
-            margin-bottom: 2.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        p {
-            margin-bottom: 1.25rem;
-            color: var(--text-secondary);
-        }
-
-        button {
-            cursor: pointer;
-            font-family: inherit;
-            transition: var(--transition);
-            outline: none;
-            border: none;
-        }
-
-        .btn {
-            padding: 0.75rem 1.75rem;
-            border-radius: var(--radius);
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow);
-        }
-
-        /* Header */
-        header {
-            background-color: var(--surface);
-            box-shadow: var(--shadow);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            height: var(--header-height);
-            display: flex;
-            align-items: center;
-        }
-
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            text-decoration: none;
-        }
-
-        .logo-shield {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .logo-text {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--text);
-            letter-spacing: -0.5px;
-        }
-
-        .logo-text span {
-            color: var(--primary);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2.5rem;
-            list-style: none;
-        }
-
-        .nav-link {
-            color: var(--text);
-            text-decoration: none;
-            font-weight: 600;
-            position: relative;
-            padding: 0.5rem 0;
-            transition: var(--transition);
-            font-size: 1.1rem;
-        }
-
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0;
-            height: 3px;
-            background: var(--primary);
-            transition: var(--transition);
-            border-radius: 2px;
-        }
-
-        .nav-link:hover::after {
-            width: 100%;
-        }
-
-        .nav-link:hover {
-            color: var(--primary);
-        }
-
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
-                        url('https://images.pexels.com/photos/532001/pexels-photo-532001.jpeg') center/cover no-repeat;
-            height: 90vh;
-            display: flex;
-            align-items: center;
-            text-align: center;
-            color: white;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-content {
-            max-width: 900px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
-            padding-top: var(--header-height);
-        }
-
-        .hero-title {
-            font-size: 4.5rem;
-            margin-bottom: 1.5rem;
-            text-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
-            letter-spacing: -1px;
-            line-height: 1.1;
-        }
-
-        .hero-subtitle {
-            font-size: 1.8rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
-            font-weight: 300;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .hero-tagline {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 3rem;
-            flex-wrap: wrap;
-        }
-
-        .tagline-part {
-            padding: 0.8rem 1.5rem;
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .tagline-part:nth-child(1) { animation-delay: 0s; }
-        .tagline-part:nth-child(2) { animation-delay: 1s; }
-        .tagline-part:nth-child(3) { animation-delay: 2s; }
-
-        /* Map Section */
-        .map-section {
-            position: relative;
-            padding: 6rem 0;
-            background: var(--background);
-        }
-
-        .map-container {
-            position: relative;
-            height: 70vh;
-            border-radius: var(--radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            margin-bottom: 3rem;
-            border: 1px solid var(--border);
-        }
-
-        #map {
-            height: 100%;
-            width: 100%;
-        }
-
-        .map-controls {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-        }
-
-        .map-control {
-            width: 3rem;
-            height: 3rem;
-            border-radius: 50%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow-lg);
-            transition: var(--transition);
-            font-size: 1.2rem;
-        }
-
-        .map-control:hover {
-            background: var(--primary);
-            color: white;
-            transform: scale(1.1) rotate(8deg);
-        }
-
-        .map-overlay {
-            position: absolute;
-            bottom: 1.5rem;
-            left: 1.5rem;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.92);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-lg);
-            max-width: 320px;
-            backdrop-filter: blur(5px);
-            border: 1px solid var(--border);
-            transform: translateY(0);
-            transition: transform 0.4s ease;
-        }
-
-        .map-overlay:hover {
-            transform: translateY(-5px);
-        }
-
-        .dark .map-overlay {
-            background: rgba(30, 41, 59, 0.92);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .stat-card {
-            background: var(--primary-light);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: var(--shadow);
-        }
-
-        .dark .stat-card {
-            background: var(--primary-dark);
-        }
-
-        .stat-value {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .dark .stat-value {
-            color: white;
-        }
-
-        /* Safety Score Section */
-        .safety-section {
-            background: linear-gradient(to bottom, var(--background), rgba(16, 185, 129, 0.05));
-            position: relative;
-            overflow: hidden;
-        }
-
-        .safety-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-
-        .safety-card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 2rem;
-            box-shadow: var(--shadow-lg);
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-            border-top: 4px solid;
-            transform: perspective(1000px) rotateY(0deg);
-            transform-style: preserve-3d;
-        }
-
-        .safety-card:hover {
-            transform: perspective(1000px) rotateY(5deg) translateY(-10px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-
-        .safety-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .safety-score {
-            font-size: 3.5rem;
-            font-weight: 800;
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            align-items: flex-end;
-            gap: 0.5rem;
-        }
-
-        .score-trend {
-            font-size: 1.2rem;
-            padding: 0.3rem 0.8rem;
-            border-radius: 50px;
-            font-weight: 600;
-        }
-
-        .trend-up {
-            background: var(--accent-light);
-            color: var(--accent);
-        }
-
-        .trend-down {
-            background: var(--secondary-light);
-            color: var(--secondary);
-        }
-
-        .trend-neutral {
-            background: var(--warning-light);
-            color: var(--warning);
-        }
-
-        .safety-labels {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .safety-label {
-            padding: 0.4rem 0.8rem;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            background: var(--primary-light);
-            color: var(--primary);
-        }
-
-        /* Dashboard */
-        .dashboard-section {
-            background: linear-gradient(to bottom, var(--background), var(--primary-light));
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-bottom: 4rem;
-        }
-
-        .dashboard-card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 2rem;
-            box-shadow: var(--shadow-lg);
-            text-align: center;
-            transition: var(--transition);
-            border-top: 4px solid var(--primary);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dashboard-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: var(--primary);
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform 0.5s ease;
-        }
-
-        .dashboard-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .dashboard-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-
-        .dashboard-stat {
-            font-size: 3rem;
-            font-weight: 800;
-            color: var(--primary);
-            margin: 1rem 0;
-            font-family: 'Arial', sans-serif;
-        }
-
-        .chart-container {
-            height: 350px;
-            margin-top: 2rem;
-            position: relative;
-        }
-
-        /* Wanted Section */
-        .wanted-section {
-            background: url('https://images.pexels.com/photos/96612/pexels-photo-96612.jpeg') center/cover no-repeat;
-            position: relative;
-        }
-
-        .wanted-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
-        }
-
-        .wanted-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2.5rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .wanted-card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            transition: var(--transition);
-            transform: perspective(1000px) rotateY(0deg);
-            transform-style: preserve-3d;
-        }
-
-        .wanted-card:hover {
-            transform: perspective(1000px) rotateY(5deg) translateY(-10px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-
-        .wanted-image {
-            height: 350px;
-            background: linear-gradient(135deg, #2c3e50 0%, #4a6580 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .wanted-image::before {
-            content: "WANTED";
-            position: absolute;
-            top: 30%;
-            left: 0;
-            right: 0;
-            font-size: 3.5rem;
-            font-weight: 900;
-            text-align: center;
-            color: rgba(255, 255, 255, 0.08);
-            letter-spacing: 10px;
-            transform: rotate(-30deg);
-        }
-
-        .wanted-info {
-            padding: 2rem;
-            border-top: 4px solid var(--secondary);
-        }
-
-        .wanted-name {
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
-            color: var(--text);
-        }
-
-        .wanted-crime {
-            color: var(--secondary);
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            font-size: 1.2rem;
-            letter-spacing: 0.5px;
-        }
-
-        .wanted-reward {
-            background: linear-gradient(to right, var(--warning), #eab308);
-            color: white;
-            padding: 0.8rem 1.8rem;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            display: inline-block;
-            margin-top: 0.5rem;
-            box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);
-        }
-
-        /* Report Section */
-        .report-section {
-            background: var(--background);
-        }
-
-        .report-form {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 3rem;
-            box-shadow: var(--shadow-lg);
-            max-width: 900px;
-            margin: 0 auto;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .report-form::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 6px;
-            height: 100%;
-            background: var(--primary);
-        }
-
-        .form-group {
-            margin-bottom: 2rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.8rem;
-            font-weight: 600;
-            color: var(--text);
-            font-size: 1.1rem;
-        }
-
-        input, textarea, select {
-            width: 100%;
-            padding: 1.1rem 1.5rem;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            background: var(--background);
-            color: var(--text);
-            transition: var(--transition);
-            font-family: inherit;
-            font-size: 1rem;
-        }
-
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
-        }
-
-        textarea {
-            min-height: 180px;
-            resize: vertical;
-        }
-
-        .submit-btn {
-            background: linear-gradient(to right, var(--primary), var(--primary-dark));
-            color: white;
-            border: none;
-            padding: 1.2rem 2rem;
-            border-radius: var(--radius);
-            font-weight: 700;
-            cursor: pointer;
-            transition: var(--transition);
-            font-size: 1.1rem;
-            width: 100%;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 15px rgba(59, 130, 246, 0.4);
-        }
-
-        /* Anonymous Tip Section */
-        .tip-section {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            color: white;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .tip-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
-            transform: rotate(30deg);
-        }
-
-        .tip-container {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: var(--radius);
-            padding: 3rem;
-            max-width: 700px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .tip-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .tip-icon {
-            font-size: 2.5rem;
-            color: white;
-            background: rgba(255, 255, 255, 0.2);
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Resources Section */
-        .resources-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-
-        .resource-card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 2rem;
-            box-shadow: var(--shadow-lg);
-            transition: var(--transition);
-            text-align: center;
-            border-top: 4px solid var(--primary);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .resource-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-
-        .resource-icon {
-            font-size: 3.5rem;
-            color: var(--primary);
-            margin-bottom: 1.5rem;
-            transition: var(--transition);
-        }
-
-        .resource-card:hover .resource-icon {
-            transform: scale(1.2);
-        }
-
-        /* Social Media */
-        .social-section {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            color: white;
-            text-align: center;
-            padding: 5rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .social-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
-            transform: rotate(30deg);
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-top: 3rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .social-link {
-            width: 4.5rem;
-            height: 4.5rem;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            transition: var(--transition);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .social-link:hover {
-            background: white;
-            color: var(--primary);
-            transform: translateY(-8px) scale(1.1);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Footer */
-        footer {
-            background: var(--surface);
-            padding: 4rem 0 2rem;
-            border-top: 1px solid var(--border);
-            position: relative;
-        }
-
-        .footer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 3rem;
-            margin-bottom: 3rem;
-        }
-
-        .footer-logo {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .footer-title {
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            font-weight: 700;
-            color: var(--text);
-            position: relative;
-            padding-bottom: 0.8rem;
-        }
-
-        .footer-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 50px;
-            height: 3px;
-            background: var(--primary);
-            border-radius: 2px;
-        }
-
-        .footer-links {
-            list-style: none;
-        }
-
-        .footer-link {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            margin-bottom: 1.2rem;
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: var(--transition);
-            font-size: 1.1rem;
-        }
-
-        .footer-link i {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: var(--background);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: var(--transition);
-        }
-
-        .footer-link:hover {
-            color: var(--primary);
-            padding-left: 5px;
-        }
-
-        .footer-link:hover i {
-            background: var(--primary);
-            color: white;
-        }
-
-        .copyright {
-            text-align: center;
-            color: var(--text-secondary);
-            padding-top: 3rem;
-            border-top: 1px solid var(--border);
-            font-size: 1rem;
-        }
-
-        /* Dark Mode Toggle */
-        .dark-mode-toggle {
-            position: fixed;
-            bottom: 2.5rem;
-            right: 2.5rem;
-            z-index: 1000;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 50%;
-            width: 4rem;
-            height: 4rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow-lg);
-            transition: var(--transition);
-            font-size: 1.4rem;
-        }
-
-        .dark-mode-toggle:hover {
-            transform: translateY(-5px) rotate(15deg);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Export Controls */
-        .export-controls {
-            display: flex;
-            gap: 1rem;
-            margin-top: 2rem;
-            justify-content: center;
-        }
-
-        .export-btn {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 0.8rem 1.5rem;
-            border-radius: var(--radius);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: var(--transition);
-        }
-
-        .export-btn:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-3px);
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-            100% { transform: translateY(0px); }
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .fade-in {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.8s ease, transform 0.8s ease;
-        }
-
-        .fade-in.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.3s ease;
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 2.5rem;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: var(--shadow-lg);
-            animation: fadeInUp 0.4s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .modal-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-            background: var(--primary);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.8rem;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.8rem;
-            color: var(--text);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .close-modal:hover {
-            color: var(--secondary);
-            transform: rotate(90deg);
-        }
-
-        /* Crime Legend */
-        .crime-legend {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            padding: 0.5rem;
-            border-radius: var(--radius);
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(5px);
-        }
-
-        .dark .legend-item {
-            background: rgba(30, 41, 59, 0.7);
-        }
-
-        .legend-color {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 992px) {
-            .hero-title {
-                font-size: 3.5rem;
-            }
-            .hero-subtitle {
-                font-size: 1.5rem;
-            }
-            .nav-links {
-                gap: 1.8rem;
-            }
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2.8rem;
-            }
-            h2 {
-                font-size: 2.2rem;
-            }
-            .hero-title {
-                font-size: 3rem;
-            }
-            .hero-subtitle {
-                font-size: 1.3rem;
-            }
-            .hero-tagline {
-                flex-direction: column;
-                gap: 1rem;
-                font-size: 1.5rem;
-            }
-            .nav-links {
-                display: none;
-            }
-            .map-overlay {
-                max-width: 100%;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                border-radius: 0;
-            }
-            .dashboard-grid, .safety-grid, .resources-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .hero-title {
-                font-size: 2.5rem;
-            }
-            .logo-text {
-                font-size: 1.5rem;
-            }
-            .dashboard-stat {
-                font-size: 2.5rem;
-            }
-        }
-    </style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GeoBots — Botswana Crime Mapping</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* ── TOKENS ──────────────────────────────────────────────── */
+:root {
+  --bg:      #0a0a0f;
+  --surface: #13131a;
+  --card:    #1c1c26;
+  --card2:   #252530;
+  --accent:  #C8FF00;
+  --adim:    rgba(200,255,0,0.10);
+  --danger:  #FF5C5C;
+  --ddim:    rgba(255,92,92,0.15);
+  --gbv:     #a855f7;
+  --gdim:    rgba(168,85,247,0.15);
+  --t1:      #f0f0ff;
+  --t2:      #7878a0;
+  --t3:      #3a3a55;
+  --border:  rgba(255,255,255,0.07);
+  --blight:  rgba(255,255,255,0.12);
+  --nav-h:   68px;
+  --bar-h:   56px;
+  --r:       14px;
+  --safe-b:  env(safe-area-inset-bottom, 0px);
+
+  /* Easing */
+  --spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --smooth:  cubic-bezier(0.4, 0, 0.2, 1);
+  --out:     cubic-bezier(0, 0, 0.2, 1);
+}
+html.light {
+  --bg:      #f0f2f8;
+  --surface: #ffffff;
+  --card:    #f7f8fc;
+  --card2:   #eeeff5;
+  --t1:      #0f0f1a;
+  --t2:      #6060a0;
+  --t3:      #b0b0d0;
+  --border:  rgba(0,0,0,0.08);
+  --blight:  rgba(0,0,0,0.14);
+}
+
+/* ── RESET ───────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t1)}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,textarea,select{font-family:inherit}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:0}
+
+/* ── LIQUID ANIMATIONS ──────────────────────────────────── */
+@keyframes liquidIn {
+  0%   { transform:translateY(24px) scale(0.97); opacity:0; filter:blur(6px) }
+  65%  { transform:translateY(-5px) scale(1.01); opacity:1; filter:blur(0) }
+  100% { transform:translateY(0) scale(1); opacity:1; filter:blur(0) }
+}
+@keyframes fadeUp {
+  from { transform:translateY(16px); opacity:0 }
+  to   { transform:translateY(0); opacity:1 }
+}
+@keyframes pulse-ring {
+  0%   { transform:scale(1); opacity:.7 }
+  70%  { transform:scale(2.6); opacity:0 }
+  100% { transform:scale(2.6); opacity:0 }
+}
+@keyframes wave {
+  0%   { background-position: -200% center }
+  100% { background-position: 200% center }
+}
+@keyframes countUp {
+  from { opacity:0; transform:translateY(8px) }
+  to   { opacity:1; transform:translateY(0) }
+}
+@keyframes shimmer {
+  0%   { opacity:.4 }
+  50%  { opacity:1 }
+  100% { opacity:.4 }
+}
+@keyframes sheetUp {
+  from { transform:translateY(100%) }
+  to   { transform:translateY(0) }
+}
+@keyframes navSlide {
+  from { transform:scaleX(0) }
+  to   { transform:scaleX(1) }
+}
+@keyframes drawerSlide {
+  from { transform:translateX(-100%) }
+  to   { transform:translateX(0) }
+}
+@keyframes glow {
+  0%,100% { box-shadow: 0 0 12px rgba(200,255,0,0.2) }
+  50%      { box-shadow: 0 0 28px rgba(200,255,0,0.5) }
+}
+
+/* prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important }
+}
+
+/* ── TOP BAR ──────────────────────────────────────────────── */
+#top-bar {
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:var(--bar-h);
+  background:rgba(10,10,15,0.85);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 8px;gap:4px;
+}
+html.light #top-bar { background:rgba(255,255,255,0.88) }
+
+#bar-title {
+  flex:1;font-size:17px;font-weight:800;letter-spacing:-.5px;
+  text-align:center;
+  background:linear-gradient(135deg, #C8FF00 0%, #00e5ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+html.light #bar-title {
+  background:linear-gradient(135deg,#7030a0 0%,#0070d0 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+.bar-btn {
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  border-radius:10px;color:var(--t2);flex-shrink:0;
+  transition:background .2s var(--smooth), color .2s var(--smooth), transform .15s var(--spring);
+}
+.bar-btn:active{background:var(--card);transform:scale(.9)}
+
+/* ── MAP LAYER ───────────────────────────────────────────── */
+#map-layer {
+  position:fixed;
+  top:var(--bar-h);left:0;right:0;
+  bottom:calc(var(--nav-h) + var(--safe-b));
+  z-index:1;
+  transition:opacity .3s var(--smooth);
+}
+#map { width:100%;height:100% }
+
+/* ── MAP FABs ────────────────────────────────────────────── */
+#map-fabs {
+  position:absolute;top:14px;right:14px;
+  display:flex;flex-direction:column;gap:10px;z-index:10;
+}
+.fab {
+  width:46px;height:46px;border-radius:50%;
+  background:rgba(19,19,26,0.88);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  color:var(--t1);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  border:1px solid var(--border);
+  transition:all .25s var(--spring);
+  -webkit-tap-highlight-color:transparent;
+}
+.fab:active{transform:scale(.88)}
+.fab.active{
+  background:var(--accent);color:#000;border-color:var(--accent);
+  box-shadow:0 4px 20px rgba(200,255,0,0.4);
+  animation:glow 2s infinite;
+}
+
+/* ── HEAT BANNER ─────────────────────────────────────────── */
+#heat-banner {
+  position:absolute;top:14px;left:14px;
+  background:rgba(10,10,15,0.85);
+  backdrop-filter:blur(12px);
+  color:var(--accent);font-size:11px;font-weight:700;
+  padding:6px 12px;border-radius:20px;letter-spacing:1px;
+  border:1px solid rgba(200,255,0,0.3);
+  display:none;z-index:10;
+  animation:liquidIn .4s var(--spring) both;
+}
+
+/* ── PANIC STRIP ─────────────────────────────────────────── */
+#panic-strip {
+  position:absolute;bottom:0;left:0;right:0;
+  display:flex;flex-direction:column;gap:8px;
+  padding:10px 14px;
+  background:linear-gradient(0deg, rgba(10,10,15,.95) 0%, rgba(10,10,15,.7) 60%, transparent 100%);
+  z-index:10;
+}
+html.light #panic-strip {
+  background:linear-gradient(0deg,rgba(240,242,248,.95) 0%,rgba(240,242,248,.7) 60%,transparent 100%);
+}
+
+/* ── PANIC BUTTON ─────────────────────────────────────────── */
+.pbtn {
+  position:relative;overflow:hidden;
+  width:100%;height:54px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:14px;font-weight:800;letter-spacing:.3px;
+  color:#fff;cursor:pointer;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .15s var(--spring), box-shadow .2s var(--smooth);
+  border:none;
+}
+.pbtn:active{transform:scale(.96)}
+.pbtn-999 {
+  background:linear-gradient(135deg, #ff6b6b 0%, #ee2222 100%);
+  box-shadow:0 4px 20px rgba(255,60,60,.35);
+}
+.pbtn-gbv {
+  background:linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);
+  box-shadow:0 4px 20px rgba(168,85,247,.35);
+}
+.pbtn-fill {
+  position:absolute;left:0;top:0;bottom:0;width:0%;
+  pointer-events:none;overflow:hidden;border-radius:inherit;
+}
+.pbtn-fill::after {
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,255,255,.3) 40%,
+    rgba(255,255,255,.5) 50%,
+    rgba(255,255,255,.3) 60%,
+    transparent 100%);
+  background-size:200% 100%;
+  animation:wave 1s linear infinite;
+}
+.pbtn-fill-bg {
+  position:absolute;inset:0;
+  background:rgba(255,255,255,.18);
+}
+.pbtn svg{flex-shrink:0;z-index:1}
+.pbtn span{z-index:1}
+
+/* ── SCREEN HOST ─────────────────────────────────────────── */
+#screen-host {
+  position:fixed;
+  top:var(--bar-h);left:0;right:0;
+  bottom:calc(var(--nav-h) + var(--safe-b));
+  z-index:2;
+  pointer-events:none;
+}
+.screen {
+  position:absolute;inset:0;
+  display:none;overflow-y:auto;
+  pointer-events:all;
+  will-change:transform,opacity;
+}
+.screen.active{display:block}
+.screen.entering{animation:liquidIn .45s var(--spring) both}
+#screen-map,#screen-heat{background:transparent;pointer-events:none}
+#screen-map.active,#screen-heat.active{pointer-events:none}
+#screen-report,#screen-tips,#screen-safety{background:var(--bg)}
+
+/* ── BOTTOM NAV ──────────────────────────────────────────── */
+#bottom-nav {
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  height:calc(var(--nav-h) + var(--safe-b));
+  background:rgba(10,10,15,0.92);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-top:1px solid var(--border);
+  display:flex;align-items:flex-start;
+  padding-top:6px;
+  padding-bottom:var(--safe-b);
+}
+html.light #bottom-nav{background:rgba(255,255,255,0.92)}
+
+.nav-item {
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:6px 4px;color:var(--t2);cursor:pointer;
+  font-size:10px;font-weight:600;letter-spacing:.4px;
+  position:relative;
+  transition:color .25s var(--smooth);
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-item svg{transition:transform .3s var(--spring)}
+.nav-item.active{color:var(--accent)}
+.nav-item.active svg{transform:scale(1.18) translateY(-2px)}
+.nav-item::after {
+  content:'';
+  position:absolute;bottom:-2px;left:50%;
+  transform:translateX(-50%) scaleX(0);
+  width:28px;height:3px;border-radius:2px;
+  background:var(--accent);
+  transition:transform .3s var(--spring);
+}
+.nav-item.active::after{transform:translateX(-50%) scaleX(1)}
+
+/* ── RIPPLE ──────────────────────────────────────────────── */
+.ripple-host{position:relative;overflow:hidden}
+.ripple-wave {
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,.25);
+  transform:scale(0);
+  animation:rippleAnim .5s var(--out) forwards;
+  pointer-events:none;
+}
+@keyframes rippleAnim {
+  to{transform:scale(4);opacity:0}
+}
+
+/* ── DRAWER ──────────────────────────────────────────────── */
+#drawer-overlay {
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.65);
+  opacity:0;pointer-events:none;
+  transition:opacity .3s var(--smooth);
+}
+#drawer-overlay.visible{opacity:1;pointer-events:all}
+#drawer {
+  position:fixed;top:0;left:0;bottom:0;z-index:201;
+  width:min(300px,82vw);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  transform:translateX(-100%);
+  transition:transform .35s var(--spring);
+  display:flex;flex-direction:column;overflow-y:auto;
+}
+#drawer.open{transform:translateX(0)}
+
+.drawer-profile {
+  padding:44px 20px 22px;
+  background:linear-gradient(135deg,rgba(168,85,247,.8) 0%,rgba(255,92,92,.7) 100%);
+  position:relative;overflow:hidden;
+}
+.drawer-profile::before {
+  content:'';position:absolute;inset:-50%;
+  background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);
+  animation:shimmer 3s ease-in-out infinite;
+}
+.drawer-avatar {
+  width:58px;height:58px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  border:2px solid rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:10px;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);
+}
+.drawer-name{font-size:16px;font-weight:800;color:#fff;margin-bottom:3px}
+.drawer-sub{font-size:12px;color:rgba(255,255,255,.65)}
+
+.drawer-nav{padding:10px 0}
+.drawer-item {
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;color:var(--t1);font-size:14px;font-weight:500;
+  cursor:pointer;
+  transition:background .2s var(--smooth), transform .15s var(--spring);
+  -webkit-tap-highlight-color:transparent;
+}
+.drawer-item:active{background:var(--card);transform:translateX(4px)}
+.drawer-item svg{color:var(--t2);transition:color .2s}
+.drawer-item:active svg{color:var(--accent)}
+.drawer-divider{height:1px;background:var(--border);margin:6px 16px}
+
+/* ── SECTION HEADERS ─────────────────────────────────────── */
+.section-head {
+  padding:20px 16px 8px;
+  font-size:11px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;color:var(--t2);
+}
+
+/* ── CARDS ───────────────────────────────────────────────── */
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border)}
+.card2{background:var(--card2);border-radius:var(--r);border:1px solid var(--border)}
+
+/* ── REPORT SCREEN ───────────────────────────────────────── */
+#screen-report{padding-bottom:20px}
+.anon-banner {
+  margin:12px 16px 0;
+  background:var(--adim);border:1px solid rgba(200,255,0,.3);
+  border-radius:12px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;color:var(--accent);font-weight:600;
+  animation:fadeUp .4s var(--spring) both;
+}
+.anon-banner svg{flex-shrink:0}
+
+.form-card {
+  margin:12px 16px;padding:18px;
+  background:var(--card);border-radius:var(--r);
+  border:1px solid var(--border);
+  animation:fadeUp .4s var(--spring) .05s both;
+}
+.form-card h3{font-size:15px;font-weight:800;margin-bottom:16px;color:var(--t1)}
+.form-group{margin-bottom:13px}
+.form-group label{
+  display:block;font-size:11px;font-weight:700;
+  color:var(--t2);margin-bottom:6px;letter-spacing:.6px;text-transform:uppercase
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width:100%;background:var(--card2);
+  border:1px solid var(--border);border-radius:10px;
+  padding:11px 14px;font-size:14px;color:var(--t1);
+  outline:none;
+  transition:border-color .2s var(--smooth), box-shadow .2s var(--smooth), transform .15s var(--spring);
+  -webkit-appearance:none;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(200,255,0,.12);
+  transform:translateY(-1px);
+}
+.form-group textarea{resize:vertical;min-height:82px}
+.form-group select option{background:var(--card);color:var(--t1)}
+
+.btn-submit {
+  width:100%;height:50px;border-radius:12px;
+  background:linear-gradient(135deg,#d4ff00 0%,#9fff00 100%);
+  color:#000;font-size:15px;font-weight:800;
+  margin-top:6px;
+  box-shadow:0 4px 16px rgba(200,255,0,.3);
+  transition:transform .2s var(--spring), box-shadow .2s var(--smooth), opacity .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-submit:active{transform:scale(.97);box-shadow:0 2px 8px rgba(200,255,0,.2)}
+
+/* ── TIPS SCREEN ─────────────────────────────────────────── */
+.tips-bar {
+  padding:14px 16px 8px;
+  display:flex;align-items:center;gap:10px;
+  animation:fadeUp .35s var(--spring) both;
+}
+.tips-bar h2{font-size:18px;font-weight:800;flex:1}
+.tip-count {
+  background:var(--adim);color:var(--accent);
+  font-size:11px;font-weight:700;
+  padding:4px 10px;border-radius:20px;
+  border:1px solid rgba(200,255,0,.2);
+}
+
+.tip-card {
+  margin:0 16px 10px;
+  background:var(--card);border-radius:var(--r);
+  border:1px solid var(--border);padding:15px;
+  transition:transform .2s var(--spring), box-shadow .2s var(--smooth);
+  -webkit-tap-highlight-color:transparent;
+}
+.tip-card:active{transform:scale(.98);box-shadow:none}
+
+.tip-top {
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.tip-badge {
+  font-size:10px;font-weight:700;letter-spacing:.5px;
+  padding:3px 9px;border-radius:20px;text-transform:uppercase;
+}
+.tip-verified {
+  margin-left:auto;display:flex;align-items:center;gap:4px;
+  font-size:11px;color:var(--accent);font-weight:700;
+}
+.tip-meta {
+  font-size:11px;color:var(--t2);margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.tip-text{font-size:13px;color:var(--t1);line-height:1.55;margin-bottom:10px}
+.tip-foot{display:flex;align-items:center}
+.tip-upvote {
+  display:flex;align-items:center;gap:5px;
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:20px;padding:6px 13px;
+  font-size:12px;font-weight:700;color:var(--t2);
+  cursor:pointer;
+  transition:all .25s var(--spring);
+  -webkit-tap-highlight-color:transparent;
+}
+.tip-upvote:active{transform:scale(.92)}
+.tip-upvote.voted{
+  background:var(--adim);border-color:rgba(200,255,0,.4);
+  color:var(--accent);
+  box-shadow:0 0 12px rgba(200,255,0,.15);
+}
+
+/* ── SAFETY SCREEN ───────────────────────────────────────── */
+#screen-safety{padding-bottom:28px}
+.safety-panic-wrap{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.safety-pbtn {
+  position:relative;overflow:hidden;
+  width:100%;height:58px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:15px;font-weight:800;color:#fff;
+  cursor:pointer;user-select:none;border:none;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .15s var(--spring),box-shadow .2s;
+}
+.safety-pbtn:active{transform:scale(.97)}
+.safety-pbtn.pbtn-999{
+  background:linear-gradient(135deg,#ff6b6b 0%,#ee2222 100%);
+  box-shadow:0 4px 24px rgba(255,60,60,.4);
+}
+.safety-pbtn.pbtn-gbv{
+  background:linear-gradient(135deg,#c084fc 0%,#7c3aed 100%);
+  box-shadow:0 4px 24px rgba(168,85,247,.4);
+}
+
+/* Stat pills */
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 14px}
+.stat-pill {
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:14px 16px;
+  transition:transform .25s var(--spring);
+}
+.stat-pill:active{transform:scale(.96)}
+.stat-pill .s-val{
+  font-size:26px;font-weight:900;color:var(--t1);
+  background:linear-gradient(135deg,#C8FF00,#00e5ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.stat-pill .s-lbl{font-size:11px;color:var(--t2);margin-top:2px;font-weight:500}
+
+/* Safety cards 2-col */
+.safety-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 14px}
+.s-card {
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:16px;cursor:pointer;
+  transition:transform .25s var(--spring),box-shadow .2s var(--smooth),background .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.s-card:active{transform:scale(.95) translateY(2px);box-shadow:none}
+.s-card-icon {
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:10px;
+}
+.s-card h4{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.s-card p{font-size:11px;color:var(--t2);line-height:1.4}
+
+/* GBV collapsible */
+.gbv-section{padding:0 16px 14px}
+.gbv-head {
+  display:flex;align-items:center;gap:10px;
+  padding:14px 0 12px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.gbv-head h3{font-size:14px;font-weight:800;flex:1;color:var(--t1)}
+.gbv-badge {
+  background:var(--gdim);color:var(--gbv);
+  font-size:10px;font-weight:700;padding:3px 8px;
+  border-radius:20px;letter-spacing:.5px;
+  border:1px solid rgba(168,85,247,.25);
+}
+.gbv-chevron{color:var(--t2);transition:transform .3s var(--spring);flex-shrink:0}
+.gbv-chevron.open{transform:rotate(180deg)}
+.gbv-body{
+  max-height:0;overflow:hidden;
+  transition:max-height .45s var(--smooth);
+}
+.gbv-body.open{max-height:2000px}
+.gbv-card {
+  background:var(--card);border:1px solid rgba(168,85,247,.2);
+  border-radius:12px;padding:14px;margin-bottom:8px;
+}
+.gbv-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.gbv-card-icon {
+  width:34px;height:34px;border-radius:9px;
+  background:var(--gdim);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.gbv-card h4{font-size:13px;font-weight:700;color:var(--t1)}
+.gbv-card p{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:8px}
+.gbv-call {
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--gdim);border:1px solid rgba(168,85,247,.3);
+  color:var(--gbv);font-size:12px;font-weight:700;
+  padding:7px 14px;border-radius:20px;
+  transition:transform .2s var(--spring),box-shadow .2s;
+}
+.gbv-call:active{transform:scale(.95)}
+
+/* Charts */
+.chart-wrap {
+  margin:0 16px 14px;
+  background:var(--card);border-radius:var(--r);
+  border:1px solid var(--border);padding:18px;
+}
+.chart-wrap h3{font-size:11px;font-weight:700;margin-bottom:14px;color:var(--t2);text-transform:uppercase;letter-spacing:.8px}
+
+/* Area scores */
+.area-list{padding:0 16px 14px}
+.area-item {
+  display:flex;align-items:center;gap:12px;
+  padding:11px 0;border-bottom:1px solid var(--border);
+}
+.area-item:last-child{border-bottom:none}
+.area-name{font-size:13px;font-weight:600;flex:1;color:var(--t1)}
+.area-score{font-size:13px;font-weight:800;min-width:36px;text-align:right}
+.area-bar-bg{flex:2;height:6px;background:var(--card2);border-radius:3px;overflow:hidden}
+.area-bar-fill{height:100%;border-radius:3px;transform-origin:left;transform:scaleX(0);transition:transform .8s var(--spring)}
+.area-bar-fill.animated{transform:scaleX(1)}
+
+/* Wanted */
+.wanted-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 14px}
+.wanted-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;
+  transition:transform .2s var(--spring);
+}
+.wanted-card:active{transform:scale(.96)}
+.wanted-img {
+  width:100%;height:80px;
+  background:linear-gradient(135deg,#1c1c26 0%,#252530 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.wanted-info{padding:10px 12px}
+.wanted-info h4{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.wanted-info p{font-size:10px;color:var(--t2)}
+.wanted-badge {
+  font-size:9px;font-weight:700;letter-spacing:.4px;
+  background:var(--ddim);color:var(--danger);
+  padding:3px 7px;border-radius:10px;display:inline-block;margin-top:5px;
+  border:1px solid rgba(255,92,92,.2);
+}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+#modal-overlay {
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.65);
+  display:none;align-items:flex-end;
+  backdrop-filter:blur(4px);
+}
+#modal-overlay.open{display:flex}
+#modal-sheet {
+  width:100%;
+  background:var(--surface);
+  border-radius:22px 22px 0 0;
+  border-top:1px solid var(--border);
+  max-height:80vh;overflow-y:auto;
+  padding:0 0 calc(24px + var(--safe-b));
+  animation:sheetUp .38s var(--spring);
+}
+.modal-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:12px auto}
+#modal-title{font-size:17px;font-weight:800;padding:4px 20px 14px;color:var(--t1)}
+#modal-body{padding:0 20px}
+.modal-row {
+  display:flex;align-items:center;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.modal-row:last-child{border-bottom:none}
+.modal-row-icon {
+  width:40px;height:40px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:var(--card);
+}
+.modal-row-info h4{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:1px}
+.modal-row-info p{font-size:11px;color:var(--t2)}
+.modal-call {
+  margin-left:auto;
+  background:var(--adim);border:1px solid rgba(200,255,0,.25);
+  color:var(--accent);font-size:12px;font-weight:700;
+  padding:7px 13px;border-radius:20px;flex-shrink:0;
+  transition:transform .2s var(--spring);
+}
+.modal-call:active{transform:scale(.94)}
+
+/* ── MARKER PULSE ────────────────────────────────────────── */
+.marker-dot {
+  position:relative;
+  width:14px;height:14px;
+}
+.marker-dot::before {
+  content:'';
+  position:absolute;inset:0;
+  border-radius:50%;
+  animation:pulse-ring 2.5s ease-out infinite;
+}
+
+/* ── LEAFLET POPUP DARK ───────────────────────────────────── */
+.leaflet-popup-content-wrapper {
+  background:var(--surface) !important;
+  color:var(--t1) !important;
+  border:1px solid var(--border) !important;
+  border-radius:12px !important;
+  box-shadow:0 8px 32px rgba(0,0,0,.5) !important;
+}
+.leaflet-popup-tip { background:var(--surface) !important }
+.leaflet-popup-content { color:var(--t1) !important; font-size:13px !important }
+</style>
 </head>
-<body class="antialiased">
-    <!-- Header -->
-    <header>
-        <div class="container header-container">
-            <a href="#" class="logo">
-                <div class="logo-shield">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <div class="logo-text">Geo<span>Bots</span></div>
-            </a>
-            <ul class="nav-links">
-                <li><a href="#map-section" class="nav-link">Crime Map</a></li>
-                <li><a href="#safety" class="nav-link">Safety Scores</a></li>
-                <li><a href="#dashboard" class="nav-link">Dashboard</a></li>
-                <li><a href="#wanted" class="nav-link">Wanted</a></li>
-                <li><a href="#report" class="nav-link">Report Crime</a></li>
-                <li><a href="#resources" class="nav-link">Resources</a></li>
-            </ul>
-        </div>
-    </header>
+<body>
 
-    <!-- Hero Section -->
-    <section class="hero ai-style-change-1">
-        <div class="container hero-content fade-in visible">
-            <h1 class="hero-title ai-style-change-7">Crime Mapping Botswana</h1>
-            <p class="hero-subtitle ai-style-change-8">Advanced crime tracking and prevention platform for safer communities</p>
-            <div class="hero-tagline ai-style-change-9">
-                <span class="tagline-part">Discover</span>
-                <span class="tagline-part">Analyze</span>
-                <span class="tagline-part">Prevent</span>
-            </div>
-            <button class="btn ai-style-change-10" style="background: var(--accent); color: white; padding: 1.2rem 2.5rem; font-size: 1.2rem; border-radius: 50px; font-weight: 700;" onclick="scrollToSection('map-section')">
-                Explore Crime Map
-            </button>
-        </div>
-    </section>
+<!-- TOP BAR -->
+<div id="top-bar">
+  <button class="bar-btn ripple-host" id="btn-menu" onclick="ripple(event);openDrawer()" aria-label="Menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div id="bar-title">GeoBots</div>
+  <button class="bar-btn ripple-host" id="btn-theme" onclick="ripple(event);toggleTheme()" aria-label="Toggle theme">
+    <svg id="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg id="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+  <button class="bar-btn ripple-host" id="btn-locate" onclick="ripple(event);locateMe()" aria-label="Locate me">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+  </button>
+</div>
 
-    <!-- Map Section -->
-    <section id="map-section" class="map-section fade-in visible">
-        <div class="container">
-            <h2><i class="fas fa-map-marked-alt"></i> Interactive Crime Map</h2>
-            <p>Track and report crimes in real-time across Botswana. Press and hold on the map to report an incident.</p>
-            
-            <div class="map-container">
-                <div id="map" class="leaflet-container leaflet-touch leaflet-retina leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom" tabindex="0" style="position: relative; outline-style: none;"><div class="leaflet-pane leaflet-map-pane" style="transform: translate3d(333.75px, -784.871px, 0px);"><div class="leaflet-pane leaflet-tile-pane"><div class="leaflet-layer " style="z-index: 1; opacity: 1;"><div class="leaflet-tile-container leaflet-zoom-animated" style="z-index: 17; transform: translate3d(-154px, 752px, 0px) scale(0.5);"></div><div class="leaflet-tile-container leaflet-zoom-animated" style="z-index: 18; transform: translate3d(-195px, 487px, 0px) scale(1);"><img alt="" src="https://c.tile.openstreetmap.org/12/2342/2337.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-227px, 319px, 0px); opacity: 1;"><img alt="" src="https://a.tile.openstreetmap.org/12/2342/2338.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-227px, 575px, 0px); opacity: 1;"><img alt="" src="https://b.tile.openstreetmap.org/12/2341/2337.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-483px, 319px, 0px); opacity: 1;"><img alt="" src="https://a.tile.openstreetmap.org/12/2343/2337.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(29px, 319px, 0px); opacity: 1;"><img alt="" src="https://c.tile.openstreetmap.org/12/2341/2338.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-483px, 575px, 0px); opacity: 1;"><img alt="" src="https://b.tile.openstreetmap.org/12/2343/2338.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(29px, 575px, 0px); opacity: 1;"><img alt="" src="https://b.tile.openstreetmap.org/12/2342/2336.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-227px, 63px, 0px); opacity: 1;"><img alt="" src="https://a.tile.openstreetmap.org/12/2341/2336.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-483px, 63px, 0px); opacity: 1;"><img alt="" src="https://c.tile.openstreetmap.org/12/2343/2336.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(29px, 63px, 0px); opacity: 1;"><img alt="" src="https://a.tile.openstreetmap.org/12/2340/2337.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-739px, 319px, 0px); opacity: 1;"><img alt="" src="https://b.tile.openstreetmap.org/12/2344/2337.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(285px, 319px, 0px); opacity: 1;"><img alt="" src="https://c.tile.openstreetmap.org/12/2340/2336.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-739px, 63px, 0px); opacity: 1;"><img alt="" src="https://a.tile.openstreetmap.org/12/2344/2336.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(285px, 63px, 0px); opacity: 1;"><img alt="" src="https://b.tile.openstreetmap.org/12/2340/2338.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-739px, 575px, 0px); opacity: 1;"><img alt="" src="https://c.tile.openstreetmap.org/12/2344/2338.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(285px, 575px, 0px); opacity: 1;"></div></div></div><div class="leaflet-pane leaflet-overlay-pane"><svg pointer-events="none" class="leaflet-zoom-animated" width="104" height="601" viewBox="-342 735 104 601" style="transform: translate3d(-342px, 735px, 0px);"><g><path class="leaflet-interactive" stroke="#3b82f6" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#3b82f6" fill-opacity="0.1" fill-rule="evenodd" d="M-236 1338L-344 1338L-344 733L-236 733z"></path><path class="leaflet-interactive" stroke="#10b981" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="#10b981" fill-opacity="0.3" fill-rule="evenodd" d="M-237 944L-247 944L-247 847L-237 847z"></path><path class="leaflet-interactive" stroke="#f59e0b" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="#f59e0b" fill-opacity="0.3" fill-rule="evenodd" d="M-237 1040L-247 1040L-247 944L-237 944z"></path><path class="leaflet-interactive" stroke="#ef4444" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="0.3" fill-rule="evenodd" d="M-237 1136L-247 1136L-247 1040L-237 1040z"></path><path class="leaflet-interactive" stroke="#10b981" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="#10b981" fill-opacity="0.3" fill-rule="evenodd" d="M-343 944L-343 847L-247 847L-247 944z"></path><path class="leaflet-interactive" stroke="#f59e0b" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="#f59e0b" fill-opacity="0.3" fill-rule="evenodd" d="M-343 1040L-343 944L-247 944L-247 1040z"></path><path class="leaflet-interactive" stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#3b82f6" fill-opacity="0.9" fill-rule="evenodd" d="M0 0"></path><path class="leaflet-interactive" stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="0.9" fill-rule="evenodd" d="M0 0"></path><path class="leaflet-interactive" stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#f59e0b" fill-opacity="0.9" fill-rule="evenodd" d="M0 0"></path><path class="leaflet-interactive" stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#10b981" fill-opacity="0.9" fill-rule="evenodd" d="M-250,842a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0 "></path><path class="leaflet-interactive" stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#8b5cf6" fill-opacity="0.9" fill-rule="evenodd" d="M0 0"></path><path class="leaflet-interactive" stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#3b82f6" fill-opacity="0.9" fill-rule="evenodd" d="M0 0"></path><path class="leaflet-interactive" stroke="#fff" stroke-opacity="1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="#ef4444" fill-opacity="0.9" fill-rule="evenodd" d="M0 0"></path></g></svg></div><div class="leaflet-pane leaflet-shadow-pane"><img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png" class="leaflet-marker-shadow leaflet-zoom-animated" alt="" style="margin-left: -12px; margin-top: -41px; width: 41px; height: 41px; transform: translate3d(-228px, 916px, 0px);"></div><div class="leaflet-pane leaflet-marker-pane"><div class="leaflet-marker-icon leaflet-zoom-animated leaflet-interactive" tabindex="0" role="button" style="margin-left: -30px; margin-top: -10px; width: 60px; height: 20px; transform: translate3d(-174px, 895px, 0px); z-index: 895;"><div style="background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; font-weight: 700; color: #10b981;">84%</div></div><div class="leaflet-marker-icon leaflet-zoom-animated leaflet-interactive" tabindex="0" role="button" style="margin-left: -30px; margin-top: -10px; width: 60px; height: 20px; transform: translate3d(-174px, 992px, 0px); z-index: 992;"><div style="background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; font-weight: 700; color: #f59e0b;" class="">68%</div></div><div class="leaflet-marker-icon leaflet-zoom-animated leaflet-interactive" tabindex="0" role="button" style="margin-left: -30px; margin-top: -10px; width: 60px; height: 20px; transform: translate3d(-174px, 1088px, 0px); z-index: 1088;"><div style="background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; font-weight: 700; color: #ef4444;" class="">52%</div></div><div class="leaflet-marker-icon leaflet-zoom-animated leaflet-interactive" tabindex="0" role="button" style="margin-left: -30px; margin-top: -10px; width: 60px; height: 20px; transform: translate3d(-320px, 895px, 0px); z-index: 895;"><div style="background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; font-weight: 700; color: #10b981;" class="">76%</div></div><div class="leaflet-marker-icon leaflet-zoom-animated leaflet-interactive" tabindex="0" role="button" style="margin-left: -30px; margin-top: -10px; width: 60px; height: 20px; transform: translate3d(-320px, 992px, 0px); z-index: 992;"><div style="background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; font-weight: 700; color: #f59e0b;">60%</div></div><img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png" class="leaflet-marker-icon leaflet-zoom-animated leaflet-interactive" title="Your Location" alt="Marker" tabindex="0" role="button" style="margin-left: -12px; margin-top: -41px; width: 25px; height: 41px; transform: translate3d(-228px, 916px, 0px); z-index: 916;"></div><div class="leaflet-pane leaflet-tooltip-pane"></div><div class="leaflet-pane leaflet-popup-pane"></div><div class="leaflet-proxy leaflet-zoom-animated" style="transform: translate3d(599684px, 598501px, 0px) scale(2048);"></div></div><div class="leaflet-control-container"><div class="leaflet-top leaflet-left"><div class="leaflet-control-zoom leaflet-bar leaflet-control"><a class="leaflet-control-zoom-in" href="#" title="Zoom in" role="button" aria-label="Zoom in" aria-disabled="false"><span aria-hidden="true">+</span></a><a class="leaflet-control-zoom-out" href="#" title="Zoom out" role="button" aria-label="Zoom out" aria-disabled="false"><span aria-hidden="true">−</span></a></div></div><div class="leaflet-top leaflet-right"></div><div class="leaflet-bottom leaflet-left"></div><div class="leaflet-bottom leaflet-right"><div class="leaflet-control-attribution leaflet-control"><a href="https://leafletjs.com" title="A JavaScript library for interactive maps"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8" class="leaflet-attribution-flag"><path fill="#4C7BE1" d="M0 0h12v4H0z"></path><path fill="#FFD500" d="M0 4h12v3H0z"></path><path fill="#E0BC00" d="M0 7h12v1H0z"></path></svg> Leaflet</a> <span aria-hidden="true">|</span> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors</div></div></div></div>
-                <div class="map-controls">
-                    <button id="heatmap-toggle" class="map-control" title="Toggle Heatmap">
-                        <i class="fas fa-fire"></i>
-                    </button>
-                    <button id="filter-toggle" class="map-control" title="Filter Crimes">
-                        <i class="fas fa-filter"></i>
-                    </button>
-                    <button id="locate-toggle" class="map-control" title="Locate Me">
-                        <i class="fas fa-location-arrow"></i>
-                    </button>
-                    <button id="export-map" class="map-control" title="Export Data">
-                        <i class="fas fa-download"></i>
-                    </button>
-                </div>
-                <div class="map-overlay">
-                    <h4>Crime Legend</h4>
-                    <div class="crime-legend">
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #3b82f6;"></div>
-                            <span>Theft</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #ef4444;"></div>
-                            <span>Assault</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #f59e0b;"></div>
-                            <span>Burglary</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #10b981;"></div>
-                            <span>Drugs</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #8b5cf6;"></div>
-                            <span>Vandalism</span>
-                        </div>
-                    </div>
-                    
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value" id="total-crimes">1,247</div>
-                            <div>Total Crimes</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="reported-today">27</div>
-                            <div>Reported Today</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="safety-score">72%</div>
-                            <div>National Safety</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="export-controls">
-                <button class="export-btn" id="export-csv">
-                    <i class="fas fa-file-csv"></i> Export as CSV
-                </button>
-                <button class="export-btn" id="export-pdf">
-                    <i class="fas fa-file-pdf"></i> Export as PDF
-                </button>
-                <button class="export-btn" id="export-json">
-                    <i class="fas fa-file-code"></i> Export as JSON
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Safety Score Section -->
-    <section id="safety" class="safety-section fade-in visible">
-        <div class="container">
-            <h2><i class="fas fa-star"></i> Area Safety Scores</h2>
-            <p>Weekly safety ratings for neighborhoods across Botswana</p>
-            
-            <div class="safety-grid">
-                <div class="safety-card" style="border-top-color: #10b981;">
-                    <div class="safety-card-header">
-                        <h3>Gaborone CBD</h3>
-                        <div class="safety-score">84<span>%</span></div>
-                    </div>
-                    <div class="score-trend trend-up">
-                        <i class="fas fa-arrow-up"></i> +3.2%
-                    </div>
-                    <p>Overall safety rating for the Central Business District area. High police presence and surveillance.</p>
-                    
-                    <div class="safety-labels">
-                        <div class="safety-label">Low Crime</div>
-                        <div class="safety-label">Good Lighting</div>
-                        <div class="safety-label">Patrols</div>
-                    </div>
-                </div>
-                
-                <div class="safety-card" style="border-top-color: #f59e0b;">
-                    <div class="safety-card-header">
-                        <h3>Broadhurst</h3>
-                        <div class="safety-score">68<span>%</span></div>
-                    </div>
-                    <div class="score-trend trend-neutral">
-                        <i class="fas fa-minus"></i> 0.0%
-                    </div>
-                    <p>Residential area with moderate safety. Recent reports of petty thefts reported.</p>
-                    
-                    <div class="safety-labels">
-                        <div class="safety-label">Moderate Patrols</div>
-                        <div class="safety-label">Community Watch</div>
-                    </div>
-                </div>
-                
-                <div class="safety-card" style="border-top-color: #ef4444;">
-                    <div class="safety-card-header">
-                        <h3>Old Naledi</h3>
-                        <div class="safety-score">52<span>%</span></div>
-                    </div>
-                    <div class="score-trend trend-down">
-                        <i class="fas fa-arrow-down"></i> -2.5%
-                    </div>
-                    <p>Higher risk area with increased police patrols. Recent burglary incidents reported.</p>
-                    
-                    <div class="safety-labels">
-                        <div class="safety-label">Increased Patrols</div>
-                        <div class="safety-label">Safety Initiative</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Dashboard Section -->
-    <section id="dashboard" class="dashboard-section fade-in visible">
-        <div class="container">
-            <h2><i class="fas fa-chart-line"></i> Crime Analytics Dashboard</h2>
-            <p>Comprehensive statistics and insights on crime patterns in Botswana</p>
-            
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <h3>Total Reports</h3>
-                    <div class="dashboard-stat" id="total-reports">1,247</div>
-                    <p>Since January 2023</p>
-                </div>
-                <div class="dashboard-card">
-                    <h3>This Month</h3>
-                    <div class="dashboard-stat" id="month-reports">84</div>
-                    <p>Reported crimes</p>
-                </div>
-                <div class="dashboard-card">
-                    <h3>Hotspots</h3>
-                    <div class="dashboard-stat" id="hotspots">12</div>
-                    <p>Active high-risk areas</p>
-                </div>
-                <div class="dashboard-card">
-                    <h3>Clearance Rate</h3>
-                    <div class="dashboard-stat" id="clearance">68%</div>
-                    <p>Cases resolved</p>
-                </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 3rem;">
-                <div style="background: var(--surface); border-radius: var(--radius); padding: 2rem; box-shadow: var(--shadow-lg);">
-                    <h3 class="mb-4">Crime Types Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="crime-chart" width="700" height="700" style="display: block; box-sizing: border-box; height: 350px; width: 350px;"></canvas>
-                    </div>
-                </div>
-                <div style="background: var(--surface); border-radius: var(--radius); padding: 2rem; box-shadow: var(--shadow-lg);">
-                    <h3 class="mb-4">Crimes by Region</h3>
-                    <div class="chart-container">
-                        <canvas id="region-chart" width="992" height="496" style="display: block; box-sizing: border-box; height: 248px; width: 496px;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Anonymous Tip Section -->
-    <section id="tip" class="tip-section fade-in visible">
-        <div class="container">
-            <div class="tip-header">
-                <div class="tip-icon">
-                    <i class="fas fa-user-secret"></i>
-                </div>
-                <h2>Submit Anonymous Tip</h2>
-            </div>
-            
-            <div class="tip-container">
-                <p>Provide information about criminal activity without revealing your identity. Your tip could help prevent crime and make communities safer.</p>
-                
-                <div class="form-group">
-                    <label for="tip-location"><i class="fas fa-map-marker-alt"></i> Location</label>
-                    <input type="text" id="tip-location" placeholder="Where did this occur?">
-                </div>
-                
-                <div class="form-group">
-                    <label for="tip-description"><i class="fas fa-file-alt"></i> Information</label>
-                    <textarea id="tip-description" placeholder="What information can you provide? (People involved, vehicles, activities, etc.)"></textarea>
-                </div>
-                
-                <button class="submit-btn" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
-                    <i class="fas fa-paper-plane"></i> Submit Anonymously
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Wanted Section -->
-    <section id="wanted" class="wanted-section fade-in visible ai-style-change-1">
-        <div class="container">
-            <h2 style="color: white;"><i class="fas fa-search"></i> Wanted Persons</h2>
-            <p style="color: rgba(255,255,255,0.8);">Help locate these individuals wanted in connection with crimes</p>
-            
-            <div class="wanted-grid">
-                <div class="wanted-card">
-                    <div class="wanted-image">
-                        <i class="fas fa-user fa-6x"></i>
-                    </div>
-                    <div class="wanted-info">
-                        <h3 class="wanted-name">Tebogo Molapo</h3>
-                        <div class="wanted-crime">Armed Robbery</div>
-                        <p>Wanted for multiple armed robberies in Gaborone. Last seen in Broadhurst area.</p>
-                        <div class="wanted-reward">Reward: BWP 10,000</div>
-                    </div>
-                </div>
-                
-                <div class="wanted-card">
-                    <div class="wanted-image">
-                        <i class="fas fa-user fa-6x"></i>
-                    </div>
-                    <div class="wanted-info">
-                        <h3 class="wanted-name">Lerato Kgosi</h3>
-                        <div class="wanted-crime">Fraud &amp; Embezzlement</div>
-                        <p>Wanted for corporate fraud involving BWP 2.3 million. May be using alias.</p>
-                        <div class="wanted-reward">Reward: BWP 15,000</div>
-                    </div>
-                </div>
-                
-                <div class="wanted-card">
-                    <div class="wanted-image">
-                        <i class="fas fa-user fa-6x"></i>
-                    </div>
-                    <div class="wanted-info">
-                        <h3 class="wanted-name">Kagiso Moremi</h3>
-                        <div class="wanted-crime">Drug Trafficking</div>
-                        <p>Wanted for leading a drug trafficking ring. Considered armed and dangerous.</p>
-                        <div class="wanted-reward">Reward: BWP 25,000</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Report Section -->
-    <section id="report" class="report-section fade-in visible">
-        <div class="container">
-            <h2><i class="fas fa-edit"></i> Report a Crime</h2>
-            <p>Help make your community safer by reporting crimes</p>
-            
-            <div class="report-form">
-                <div class="form-group">
-                    <label for="crime-type"><i class="fas fa-bolt"></i> Crime Type</label>
-                    <select id="crime-type" class="w-full">
-                        <option value="">Select a crime type</option>
-                        <option value="theft">Theft</option>
-                        <option value="burglary">Burglary</option>
-                        <option value="assault">Assault</option>
-                        <option value="vandalism">Vandalism</option>
-                        <option value="drug">Drug Activity</option>
-                        <option value="fraud">Fraud</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="location"><i class="fas fa-map-marker-alt"></i> Location</label>
-                    <input type="text" id="location" placeholder="Enter location in Botswana">
-                </div>
-                
-                <div class="form-group">
-                    <label for="date"><i class="fas fa-calendar"></i> Date &amp; Time</label>
-                    <input type="datetime-local" id="date">
-                </div>
-                
-                <div class="form-group">
-                    <label for="description"><i class="fas fa-file-alt"></i> Description</label>
-                    <textarea id="description" placeholder="Describe what happened"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="contact"><i class="fas fa-user"></i> Contact Information (Optional)</label>
-                    <input type="text" id="contact" placeholder="Phone or email">
-                </div>
-                
-                <button class="submit-btn"><i class="fas fa-paper-plane"></i> Submit Report</button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Resources Section -->
-    <section id="resources" class="fade-in visible">
-        <div class="container">
-            <h2><i class="fas fa-shield-alt"></i> Safety Resources</h2>
-            <p>Information and tools to help you stay safe</p>
-            
-            <div class="resources-grid">
-                <div class="resource-card" onclick="showResource('emergency')">
-                    <div class="resource-icon">
-                        <i class="fas fa-phone-alt"></i>
-                    </div>
-                    <h3>Emergency Contacts</h3>
-                    <p>Immediate help when you need it</p>
-                </div>
-                
-                <div class="resource-card" onclick="showResource('police')">
-                    <div class="resource-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h3>Police Stations</h3>
-                    <p>Locate your nearest police station</p>
-                </div>
-                
-                <div class="resource-card" onclick="showResource('community')">
-                    <div class="resource-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <h3>Community Watch</h3>
-                    <p>Join or start a neighborhood watch</p>
-                </div>
-                
-                <div class="resource-card" onclick="showResource('prevention')">
-                    <div class="resource-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
-                    <h3>Crime Prevention</h3>
-                    <p>Tips to protect yourself and property</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Social Media Section -->
-    <section class="social-section fade-in visible">
-        <div class="container">
-            <h2>Connect With Us</h2>
-            <p>Stay updated on crime prevention tips and community safety initiatives</p>
-            
-            <div class="social-links">
-                <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-                <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-                <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-                <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
-                <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="fade-in visible">
-        <div class="container">
-            <div class="footer-grid">
-                <div>
-                    <div class="footer-logo">
-                        <div class="logo-shield">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <div class="logo-text">Geo<span>Bots</span></div>
-                    </div>
-                    <p style="font-size: 1.1rem; line-height: 1.8;">Empowering communities through crime mapping and data transparency for a safer Botswana.</p>
-                </div>
-                
-                <div>
-                    <h3 class="footer-title">Quick Links</h3>
-                    <ul class="footer-links">
-                        <li><a href="#map-section" class="footer-link"><i class="fas fa-chevron-right"></i> Crime Map</a></li>
-                        <li><a href="#wanted" class="footer-link"><i class="fas fa-chevron-right"></i> Wanted Persons</a></li>
-                        <li><a href="#report" class="footer-link"><i class="fas fa-chevron-right"></i> Report Crime</a></li>
-                        <li><a href="#resources" class="footer-link"><i class="fas fa-chevron-right"></i> Safety Resources</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h3 class="footer-title">Resources</h3>
-                    <ul class="footer-links">
-                        <li><a href="#" class="footer-link"><i class="fas fa-phone-alt"></i> Emergency Contacts</a></li>
-                        <li><a href="#" class="footer-link"><i class="fas fa-map-marker-alt"></i> Police Stations</a></li>
-                        <li><a href="#" class="footer-link"><i class="fas fa-users"></i> Community Watch</a></li>
-                        <li><a href="#" class="footer-link"><i class="fas fa-book"></i> Crime Prevention</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h3 class="footer-title">Contact Us</h3>
-                    <ul class="footer-links">
-                        <li><a href="#" class="footer-link"><i class="fas fa-envelope"></i> info@geobots.org</a></li>
-                        <li><a href="#" class="footer-link"><i class="fas fa-phone"></i> +267 123 4567</a></li>
-                        <li><a href="#" class="footer-link"><i class="fas fa-map-marker-alt"></i> Gaborone, Botswana</a></li>
-                        <li><a href="#" class="footer-link"><i class="fas fa-clock"></i> 24/7 Support</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="copyright">
-                <p>© 2023 GeoBots Crime Mapping. All rights reserved. | Privacy Policy | Terms of Service</p>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Dark Mode Toggle -->
-    <button class="dark-mode-toggle">
-        <i class="fas fa-moon" style="display: block;"></i>
-        <i class="fas fa-sun" style="display: none;"></i>
+<!-- MAP LAYER -->
+<div id="map-layer">
+  <div id="map"></div>
+  <div id="heat-banner">HEATMAP VIEW</div>
+  <div id="map-fabs">
+    <button class="fab ripple-host" id="fab-heat" onclick="ripple(event);goTab('heat')" title="Heatmap">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor"/></svg>
     </button>
+    <button class="fab ripple-host" onclick="ripple(event);goTab('map')" title="Markers">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+    </button>
+  </div>
+  <div id="panic-strip">
+    <button class="pbtn pbtn-999 ripple-host" id="pm999" aria-label="Call 999">
+      <div class="pbtn-fill" id="pf-pm999"><div class="pbtn-fill-bg"></div></div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      <span id="lbl-pm999">Hold to Call 999</span>
+    </button>
+    <button class="pbtn pbtn-gbv ripple-host" id="pmgbv" aria-label="GBV Hotline">
+      <div class="pbtn-fill" id="pf-pmgbv"><div class="pbtn-fill-bg"></div></div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8M8 16h8"/></svg>
+      <span id="lbl-pmgbv">Hold — GBV Hotline 0800 600 111</span>
+    </button>
+  </div>
+</div>
 
-    <!-- Report Modal -->
-    <div class="modal" id="report-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Report Crime at Location</h3>
-                <button class="close-modal">×</button>
-            </div>
-            <div class="form-group">
-                <label for="modal-crime-type">Crime Type</label>
-                <select id="modal-crime-type" class="w-full">
-                    <option value="">Select a crime type</option>
-                    <option value="theft">Theft</option>
-                    <option value="burglary">Burglary</option>
-                    <option value="assault">Assault</option>
-                    <option value="vandalism">Vandalism</option>
-                    <option value="drug">Drug Activity</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="modal-description">Description</label>
-                <textarea id="modal-description" placeholder="Describe what happened"></textarea>
-            </div>
-            
-            <button class="submit-btn" id="modal-submit"><i class="fas fa-paper-plane"></i> Submit Report</button>
-        </div>
+<!-- SCREEN HOST -->
+<div id="screen-host">
+  <div class="screen active" id="screen-map"></div>
+  <div class="screen" id="screen-heat"></div>
+
+  <!-- REPORT -->
+  <div class="screen" id="screen-report">
+    <div class="anon-banner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      Your identity is protected — this report is anonymous
+    </div>
+    <div class="form-card">
+      <h3>Report a Crime</h3>
+      <div class="form-group"><label>Crime Type</label>
+        <select id="report-type">
+          <option value="theft">Theft / Robbery</option>
+          <option value="assault">Assault</option>
+          <option value="gbv">Gender-Based Violence</option>
+          <option value="vandalism">Vandalism</option>
+          <option value="fraud">Fraud / Scam</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Description</label>
+        <textarea id="report-desc" placeholder="Briefly describe what happened…"></textarea>
+      </div>
+      <div class="form-group"><label>Location (tap map to pin, or describe)</label>
+        <input type="text" id="report-loc" placeholder="e.g. Gaborone CBD, near Game City">
+      </div>
+      <button class="btn-submit ripple-host" onclick="ripple(event);submitReport()">Submit Anonymous Report</button>
+    </div>
+    <div class="form-card" style="animation-delay:.1s">
+      <h3>Submit Anonymous Tip</h3>
+      <div class="anon-banner" style="margin:0 0 16px;border-radius:9px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Anonymous — no personal data stored
+      </div>
+      <div class="form-group"><label>Category</label>
+        <select id="tip-cat">
+          <option value="theft">Theft</option><option value="assault">Assault</option>
+          <option value="gbv">GBV</option><option value="fraud">Fraud</option>
+          <option value="drugs">Drugs</option><option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Area / Location</label>
+        <input type="text" id="tip-loc" placeholder="e.g. Broadhurst">
+      </div>
+      <div class="form-group"><label>Tip Details</label>
+        <textarea id="tip-text" placeholder="What did you see or hear?"></textarea>
+      </div>
+      <button class="btn-submit ripple-host" onclick="ripple(event);submitTip()">Submit Tip</button>
+    </div>
+  </div>
+
+  <!-- TIPS -->
+  <div class="screen" id="screen-tips">
+    <div class="tips-bar">
+      <h2>Community Tips</h2>
+      <span class="tip-count" id="tips-count">5 tips</span>
+    </div>
+    <div id="tips-feed"></div>
+  </div>
+
+  <!-- SAFETY -->
+  <div class="screen" id="screen-safety">
+    <div class="safety-panic-wrap">
+      <button class="safety-pbtn pbtn-999 ripple-host" id="ps999">
+        <div class="pbtn-fill" id="pf-ps999"><div class="pbtn-fill-bg"></div></div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        <span id="lbl-ps999">Hold to Call 999</span>
+      </button>
+      <button class="safety-pbtn pbtn-gbv ripple-host" id="psgbv">
+        <div class="pbtn-fill" id="pf-psgbv"><div class="pbtn-fill-bg"></div></div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8M8 16h8"/></svg>
+        <span id="lbl-psgbv">Hold — GBV Emergency 0800 600 111</span>
+      </button>
     </div>
 
-    <!-- Resource Modals -->
-    <div class="modal" id="emergency-modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Emergency Contacts</h3>
-                <button class="close-modal">×</button>
-            </div>
-            <div class="form-group">
-                <h4>National Emergency Numbers</h4>
-                <ul style="list-style: none; margin-top: 1rem;">
-                    <li style="display: flex; justify-content: space-between; padding: 1rem; background: var(--background); border-radius: var(--radius); margin-bottom: 0.5rem;">
-                        <span>Police Emergency</span>
-                        <span style="font-weight: 700; color: var(--primary);">999</span>
-                    </li>
-                    <li style="display: flex; justify-content: space-between; padding: 1rem; background: var(--background); border-radius: var(--radius); margin-bottom: 0.5rem;">
-                        <span>Ambulance/Fire</span>
-                        <span style="font-weight: 700; color: var(--primary);">997</span>
-                    </li>
-                    <li style="display: flex; justify-content: space-between; padding: 1rem; background: var(--background); border-radius: var(--radius); margin-bottom: 0.5rem;">
-                        <span>Childline Botswana</span>
-                        <span style="font-weight: 700; color: var(--primary);">390 7654</span>
-                    </li>
-                    <li style="display: flex; justify-content: space-between; padding: 1rem; background: var(--background); border-radius: var(--radius);">
-                        <span>Gender-Based Violence</span>
-                        <span style="font-weight: 700; color: var(--primary);">390 7655</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
+    <div class="stat-row">
+      <div class="stat-pill"><div class="s-val" data-count="247">247</div><div class="s-lbl">Total Reports</div></div>
+      <div class="stat-pill"><div class="s-val" data-count="38">38</div><div class="s-lbl">This Month</div></div>
+      <div class="stat-pill"><div class="s-val" data-count="5">5</div><div class="s-lbl">Hotspots</div></div>
+      <div class="stat-pill"><div class="s-val" data-count="64" data-suffix="%">64%</div><div class="s-lbl">Clearance Rate</div></div>
     </div>
 
-    <div class="modal" id="police-modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Police Stations</h3>
-                <button class="close-modal">×</button>
-            </div>
-            <div class="form-group">
-                <h4>Major Police Stations in Botswana</h4>
-                <ul style="list-style: none; margin-top: 1rem;">
-                    <li style="padding: 1rem; background: var(--background); border-radius: var(--radius); margin-bottom: 0.5rem;">
-                        <div style="font-weight: 700;">Central Police Station (Gaborone)</div>
-                        <div>Plot 149, Independence Ave, Gaborone</div>
-                        <div>Phone: +267 395 1111</div>
-                    </li>
-                    <li style="padding: 1rem; background: var(--background); border-radius: var(--radius); margin-bottom: 0.5rem;">
-                        <div style="font-weight: 700;">Broadhurst Police Station</div>
-                        <div>Plot 1986, Broadhurst, Gaborone</div>
-                        <div>Phone: +267 390 7999</div>
-                    </li>
-                    <li style="padding: 1rem; background: var(--background); border-radius: var(--radius); margin-bottom: 0.5rem;">
-                        <div style="font-weight: 700;">Francistown Central</div>
-                        <div>Blue Jacket Street, Francistown</div>
-                        <div>Phone: +267 241 2222</div>
-                    </li>
-                    <li style="padding: 1rem; background: var(--background); border-radius: var(--radius);">
-                        <div style="font-weight: 700;">Maun Police Station</div>
-                        <div>Tsheke Tsheko Road, Maun</div>
-                        <div>Phone: +267 686 0222</div>
-                    </li>
-                </ul>
-            </div>
+    <div class="section-head">Safety Resources</div>
+    <div class="safety-grid">
+      <div class="s-card ripple-host" onclick="ripple(event);openModal('emergency')">
+        <div class="s-card-icon" style="background:rgba(255,92,92,.15)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF5C5C" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
         </div>
+        <h4>Emergency Contacts</h4><p>Police, ambulance, fire brigade</p>
+      </div>
+      <div class="s-card ripple-host" onclick="ripple(event);openModal('police')">
+        <div class="s-card-icon" style="background:rgba(200,255,0,.12)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8FF00" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h4>Police Stations</h4><p>Nearest stations in Gaborone</p>
+      </div>
+      <div class="s-card ripple-host" onclick="ripple(event);openModal('watch')">
+        <div class="s-card-icon" style="background:rgba(59,130,246,.15)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <h4>Community Watch</h4><p>Local neighbourhood groups</p>
+      </div>
+      <div class="s-card ripple-host" onclick="ripple(event);openModal('prevention')">
+        <div class="s-card-icon" style="background:rgba(52,211,153,.15)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h4>Crime Prevention</h4><p>Safety tips and guidance</p>
+      </div>
     </div>
 
-    <script>
-        // Initialize map centered on Gaborone, Botswana
-        const map = L.map('map').setView([-24.6282, 25.9231], 13);
-        
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-        
-        // Add Botswana outline
-        const botswanaBounds = [
-            [-26.8283, 20.0], // SW
-            [-18.0, 29.0]     // NE
-        ];
-        L.rectangle(botswanaBounds, {
-            color: "#3b82f6",
-            weight: 2,
-            fillOpacity: 0.1
-        }).addTo(map);
-        
-        // Add safety score grid areas
-        const safetyGrid = [
-            { coords: [[-24.62, 25.90], [-24.65, 25.95]], score: 84, name: "Gaborone CBD", color: "#10b981" },
-            { coords: [[-24.65, 25.90], [-24.68, 25.95]], score: 68, name: "Broadhurst", color: "#f59e0b" },
-            { coords: [[-24.68, 25.90], [-24.71, 25.95]], score: 52, name: "Old Naledi", color: "#ef4444" },
-            { coords: [[-24.62, 25.85], [-24.65, 25.90]], score: 76, name: "Mogoditshane", color: "#10b981" },
-            { coords: [[-24.65, 25.85], [-24.68, 25.90]], score: 60, name: "Bontleng", color: "#f59e0b" }
-        ];
-        
-        // Add safety grid to map
-        safetyGrid.forEach(area => {
-            const rect = L.rectangle(area.coords, {
-                color: area.color,
-                weight: 1,
-                fillOpacity: 0.3
-            }).addTo(map);
-            
-            // Calculate center for label
-            const centerLat = (area.coords[0][0] + area.coords[1][0]) / 2;
-            const centerLng = (area.coords[0][1] + area.coords[1][1]) / 2;
-            
-            // Add label
-            L.marker([centerLat, centerLng], {
-                icon: L.divIcon({
-                    html: `<div style="background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; font-weight: 700; color: ${area.color};">${area.score}%</div>`,
-                    className: '',
-                    iconSize: [60, 20]
-                })
-            }).addTo(map);
-            
-            rect.bindPopup(`
-                <div style="font-weight:700;font-size:1.2rem;margin-bottom:0.5rem;color:${area.color}">
-                    ${area.name}
-                </div>
-                <div><strong>Safety Score:</strong> ${area.score}%</div>
-                <div style="margin-top:0.5rem;font-size:0.9rem;color:#666">
-                    Weekly safety rating
-                </div>
-            `);
-        });
-        
-        // Crime markers data
-        const crimeMarkers = [
-            { coords: [-24.6482, 25.9131], type: 'theft', description: 'Vehicle break-in' },
-            { coords: [-24.6382, 25.9331], type: 'burglary', description: 'Home burglary' },
-            { coords: [-24.6282, 25.9531], type: 'assault', description: 'Street assault' },
-            { coords: [-24.6182, 25.9031], type: 'vandalism', description: 'Property damage' },
-            { coords: [-24.6082, 25.9231], type: 'drug', description: 'Drug activity' },
-            { coords: [-24.6582, 25.9431], type: 'theft', description: 'Pickpocketing' },
-            { coords: [-24.6682, 25.9131], type: 'burglary', description: 'Business break-in' }
-        ];
-        
-        // Crime type colors
-        const crimeColors = {
-            'theft': '#3b82f6',
-            'burglary': '#ef4444',
-            'assault': '#f59e0b',
-            'vandalism': '#10b981',
-            'drug': '#8b5cf6'
-        };
-        
-        // Add crime markers to map
-        crimeMarkers.forEach(crime => {
-            const marker = L.circleMarker(crime.coords, {
-                radius: 12,
-                fillColor: crimeColors[crime.type],
-                color: '#fff',
-                weight: 2,
-                fillOpacity: 0.9
-            }).addTo(map);
-            
-            marker.bindPopup(`
-                <div style="font-weight:700;font-size:1.2rem;margin-bottom:0.5rem;color:${crimeColors[crime.type]}">
-                    ${crime.type.charAt(0).toUpperCase() + crime.type.slice(1)}
-                </div>
-                <div>${crime.description}</div>
-                <div style="margin-top:0.5rem;font-size:0.9rem;color:#666">
-                    <i class="fas fa-map-marker-alt"></i> Gaborone, Botswana
-                </div>
-            `);
-        });
-        
-        // Long press to report crime
-        let pressTimer;
-        let pressLocation;
-        
-        map.on('mousedown', function(e) {
-            pressLocation = e.latlng;
-            pressTimer = window.setTimeout(function() {
-                showReportModal(pressLocation);
-            }, 800); // 0.8 second press
-        });
-        
-        map.on('mouseup', function() {
-            clearTimeout(pressTimer);
-        });
-        
-        map.on('mousemove', function() {
-            clearTimeout(pressTimer);
-        });
-        
-        // Show report modal at specific location
-        function showReportModal(latlng) {
-            const modal = document.getElementById('report-modal');
-            modal.style.display = 'flex';
-            pressLocation = latlng;
-        }
-        
-        // Close modal
-        document.querySelector('.close-modal').addEventListener('click', function() {
-            document.getElementById('report-modal').style.display = 'none';
-        });
-        
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            const modals = document.querySelectorAll('.modal');
-            modals.forEach(modal => {
-                if (event.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
-        });
-        
-        // Submit modal report
-        document.getElementById('modal-submit').addEventListener('click', function() {
-            const crimeType = document.getElementById('modal-crime-type').value;
-            const description = document.getElementById('modal-description').value;
-            
-            if (!crimeType) {
-                alert('Please select a crime type');
-                return;
-            }
-            
-            // Add new marker to map
-            const marker = L.circleMarker([pressLocation.lat, pressLocation.lng], {
-                radius: 12,
-                fillColor: crimeColors[crimeType],
-                color: '#fff',
-                weight: 2,
-                fillOpacity: 0.9
-            }).addTo(map);
-            
-            marker.bindPopup(`
-                <div style="font-weight:700;font-size:1.2rem;margin-bottom:0.5rem;color:${crimeColors[crimeType]}">
-                    ${crimeType.charAt(0).toUpperCase() + crimeType.slice(1)}
-                </div>
-                <div>${description || 'No description provided'}</div>
-                <div style="margin-top:0.5rem;font-size:0.9rem;color:#666">
-                    <i class="fas fa-map-marker-alt"></i> Reported Location
-                </div>
-            `);
-            
-            // Update stats
-            const totalReports = document.getElementById('total-reports');
-            totalReports.textContent = (parseInt(totalReports.textContent) + 1).toString();
-            
-            const monthReports = document.getElementById('month-reports');
-            monthReports.textContent = (parseInt(monthReports.textContent) + 1).toString();
-            
-            const totalCrimes = document.getElementById('total-crimes');
-            totalCrimes.textContent = (parseInt(totalCrimes.textContent) + 1).toString();
-            
-            const reportedToday = document.getElementById('reported-today');
-            reportedToday.textContent = (parseInt(reportedToday.textContent) + 1).toString();
-            
-            // Close modal
-            document.getElementById('report-modal').style.display = 'none';
-            
-            // Reset form
-            document.getElementById('modal-crime-type').value = '';
-            document.getElementById('modal-description').value = '';
-            
-            // Show notification
-            alert('Crime report submitted successfully! Thank you for making your community safer.');
-        });
-        
-        // Initialize charts
-        const crimeCtx = document.getElementById('crime-chart').getContext('2d');
-        const crimeChart = new Chart(crimeCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Theft', 'Burglary', 'Assault', 'Vandalism', 'Drug Activity'],
-                datasets: [{
-                    data: [35, 25, 20, 12, 8],
-                    backgroundColor: [
-                        '#3b82f6',
-                        '#ef4444',
-                        '#f59e0b',
-                        '#10b981',
-                        '#8b5cf6'
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            font: {
-                                size: 14,
-                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        
-        const regionCtx = document.getElementById('region-chart').getContext('2d');
-        const regionChart = new Chart(regionCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Gaborone', 'Francistown', 'Maun', 'Serowe', 'Kanye'],
-                datasets: [{
-                    label: 'Crime Reports',
-                    data: [120, 85, 60, 45, 40],
-                    backgroundColor: '#3b82f6',
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Dark mode toggle
-        const darkModeToggle = document.querySelector('.dark-mode-toggle');
-        darkModeToggle.addEventListener('click', function() {
-            document.body.classList.toggle('dark');
-            const moon = this.querySelector('.fa-moon');
-            const sun = this.querySelector('.fa-sun');
-            if (document.body.classList.contains('dark')) {
-                moon.style.display = 'none';
-                sun.style.display = 'block';
-            } else {
-                moon.style.display = 'block';
-                sun.style.display = 'none';
-            }
-        });
-        
-        // Scroll to section
-        function scrollToSection(sectionId) {
-            document.getElementById(sectionId).scrollIntoView({ 
-                behavior: 'smooth' 
-            });
-        }
-        
-        // Form submission
-        document.querySelector('.submit-btn').addEventListener('click', function(e) {
-            e.preventDefault();
-            alert('Crime report submitted successfully! Thank you for making your community safer.');
-            document.querySelector('.report-form').reset();
-        });
-        
-        // Submit anonymous tip
-        document.querySelector('.tip-container .submit-btn').addEventListener('click', function() {
-            const location = document.getElementById('tip-location').value;
-            const description = document.getElementById('tip-description').value;
-            
-            if (!location || !description) {
-                alert('Please provide both location and information');
-                return;
-            }
-            
-            alert('Thank you for your anonymous tip. Your information has been securely submitted.');
-            document.getElementById('tip-location').value = '';
-            document.getElementById('tip-description').value = '';
-        });
-        
-        // Export data functionality
-        document.getElementById('export-csv').addEventListener('click', function() {
-            alert('Crime data exported as CSV successfully!');
-        });
-        
-        document.getElementById('export-pdf').addEventListener('click', function() {
-            alert('Crime data exported as PDF successfully!');
-        });
-        
-        document.getElementById('export-json').addEventListener('click', function() {
-            alert('Crime data exported as JSON successfully!');
-        });
-        
-        // Show resource modal
-        function showResource(resource) {
-            document.getElementById(`${resource}-modal`).style.display = 'flex';
-        }
-        
-        // Fade in on scroll
-        function fadeInOnScroll() {
-            document.querySelectorAll('.fade-in').forEach(el => {
-                const rect = el.getBoundingClientRect();
-                if (rect.top < window.innerHeight - 100) {
-                    el.classList.add('visible');
-                }
-            });
-        }
-        
-        window.addEventListener('scroll', fadeInOnScroll);
-        window.addEventListener('load', fadeInOnScroll);
-        
-        // Locate user
-        document.getElementById('locate-toggle').addEventListener('click', function() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    map.flyTo([position.coords.latitude, position.coords.longitude], 15);
-                    L.marker([position.coords.latitude, position.coords.longitude], {
-                        title: "Your Location"
-                    }).addTo(map).bindPopup('Your current location').openPopup();
-                }, function() {
-                    alert('Unable to get your location. Please check your browser settings.');
-                });
-            } else {
-                alert('Geolocation is not supported by your browser.');
-            }
-        });
-    </script>
+    <!-- GBV Collapsible -->
+    <div class="gbv-section">
+      <div class="gbv-head" onclick="toggleGBV()">
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--gdim);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 12v8M8 16h8"/></svg>
+        </div>
+        <h3>GBV Support Resources</h3>
+        <span class="gbv-badge">GBV</span>
+        <svg class="gbv-chevron" id="gbv-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="gbv-body" id="gbv-body">
+        <div class="gbv-card">
+          <div class="gbv-card-head">
+            <div class="gbv-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></div>
+            <h4>BOCONGO GBV Hotline</h4>
+          </div>
+          <p>24/7 free support line for GBV survivors. Confidential counselling, referrals, and crisis response.</p>
+          <a href="tel:0800600111" class="gbv-call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>0800 600 111 — Free</a>
+        </div>
+        <div class="gbv-card">
+          <div class="gbv-card-head">
+            <div class="gbv-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></div>
+            <h4>Gaborone Magistrate Court</h4>
+          </div>
+          <p>Apply for a Protection Order against an abuser. Free to apply, same-day emergency orders available. Visit the Clerk of Court, Khama Crescent.</p>
+        </div>
+        <div class="gbv-card">
+          <div class="gbv-card-head">
+            <div class="gbv-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+            <h4>Stepping Stones International</h4>
+          </div>
+          <p>Safe shelter, trauma counselling, legal aid, and reintegration support for GBV survivors and vulnerable youth.</p>
+          <a href="tel:+26731333111" class="gbv-call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>+267 313 3311</a>
+        </div>
+        <div class="gbv-card">
+          <div class="gbv-card-head">
+            <div class="gbv-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <h4>Botswana Police GBV Unit</h4>
+          </div>
+          <p>Dedicated GBV response unit within the Botswana Police Service. Officers trained for domestic violence and sexual offence cases.</p>
+          <a href="tel:999" class="gbv-call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call 999</a>
+        </div>
+        <div class="gbv-card">
+          <div class="gbv-card-head">
+            <div class="gbv-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gbv)" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+            <h4>Childline Botswana</h4>
+          </div>
+          <p>24/7 free helpline for children in distress, abuse, or danger. Confidential support for minors and caregivers.</p>
+          <a href="tel:116" class="gbv-call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>116 — Free for Minors</a>
+        </div>
+      </div>
+    </div>
 
-</body></html>
+    <div class="section-head">Crime Analytics</div>
+    <div class="chart-wrap"><h3>Crime Type Breakdown</h3><canvas id="chart-doughnut" height="200"></canvas></div>
+    <div class="chart-wrap"><h3>Incidents by Region</h3><canvas id="chart-bar" height="200"></canvas></div>
+
+    <div class="section-head">Area Safety Scores</div>
+    <div class="area-list" id="area-list"></div>
+
+    <div class="section-head">Wanted Persons</div>
+    <div class="wanted-grid" id="wanted-grid"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav id="bottom-nav">
+  <div class="nav-item active ripple-host" data-tab="map" onclick="ripple(event);goTab('map')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    Map
+  </div>
+  <div class="nav-item ripple-host" data-tab="heat" onclick="ripple(event);goTab('heat')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+    Heatmap
+  </div>
+  <div class="nav-item ripple-host" data-tab="report" onclick="ripple(event);goTab('report')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Report
+  </div>
+  <div class="nav-item ripple-host" data-tab="tips" onclick="ripple(event);goTab('tips')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    Tips
+  </div>
+  <div class="nav-item ripple-host" data-tab="safety" onclick="ripple(event);goTab('safety')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Safety
+  </div>
+</nav>
+
+<!-- DRAWER -->
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+<div id="drawer">
+  <div class="drawer-profile">
+    <div class="drawer-avatar">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <div class="drawer-name">Gaborone Resident</div>
+    <div class="drawer-sub">Anonymous — Stay Safe</div>
+  </div>
+  <div class="drawer-nav">
+    <div class="drawer-item" onclick="closeDrawer();goTab('map')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Crime Map</div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('heat')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>Heatmap</div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('report')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Report Crime</div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('tips')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Community Tips</div>
+    <div class="drawer-divider"></div>
+    <div class="drawer-item" onclick="closeDrawer();goTab('safety')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Safety &amp; Resources</div>
+    <div class="drawer-item" onclick="closeDrawer();openModal('emergency')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF5C5C" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Emergency Contacts</div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" onclick="closeModal()">
+  <div id="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div id="modal-title"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// ── DATA ───────────────────────────────────────────────────
+const crimeColors = {
+  theft:'#f59e0b', assault:'#ef4444', fraud:'#8b5cf6',
+  vandalism:'#6b7280', gbv:'#a855f7', drugs:'#ec4899',
+  robbery:'#dc2626', other:'#64748b'
+};
+
+const crimeMarkers = [
+  {coords:[-24.6282,25.9231],type:'theft',    desc:'Bag snatched near Riverwalk Mall'},
+  {coords:[-24.6553,25.9081],type:'assault',  desc:'Physical altercation at bus rank'},
+  {coords:[-24.6451,25.9124],type:'fraud',    desc:'ATM skimming device reported'},
+  {coords:[-24.6612,25.9328],type:'vandalism',desc:'Vehicles broken into, Old Naledi'},
+  {coords:[-24.6350,25.9267],type:'robbery',  desc:'Armed robbery, CBD shop'},
+  {coords:[-24.6490,25.9050],type:'gbv',      desc:'Domestic violence incident reported'},
+  {coords:[-24.6700,25.9150],type:'drugs',    desc:'Suspected drug activity reported'},
+];
+
+const safetyGrid = [
+  {area:'Gaborone CBD',  score:84, color:'#22c55e'},
+  {area:'Broadhurst',    score:68, color:'#eab308'},
+  {area:'Old Naledi',    score:52, color:'#f97316'},
+  {area:'Mogoditshane',  score:76, color:'#22c55e'},
+  {area:'Tlokweng',      score:61, color:'#eab308'},
+];
+
+const tipsData = [
+  {id:1,time:'2h ago',location:'Riverwalk',category:'theft',  text:'Someone acting suspiciously around parked cars in the Riverwalk car park, circling the same vehicles multiple times.',verified:true, upvotes:14,voted:false},
+  {id:2,time:'5h ago',location:'CBD',      category:'fraud',  text:'Two men in suits approaching people near the Standard Chartered ATM asking to help with card transactions. Avoid.',verified:true, upvotes:31,voted:false},
+  {id:3,time:'1d ago', location:'Old Naledi',category:'assault',text:'Group of youth on the corner of Lejara Road at night. Three incidents in the past week.',verified:false,upvotes:8, voted:false},
+  {id:4,time:'2d ago', location:'Broadhurst',category:'gbv',  text:'Repeated shouting and sounds of violence from a property on Phase 2. Please check on the residents.',verified:false,upvotes:5, voted:false},
+  {id:5,time:'3d ago', location:'Mogoditshane',category:'drugs',text:'Unusual foot traffic at an abandoned plot near the main road late at night. Multiple nights in a row.',verified:true, upvotes:19,voted:false},
+];
+
+const emergencyContacts = [
+  {name:'Botswana Police',  number:'999',           note:'Emergency response'},
+  {name:'Ambulance / EMS',  number:'997',           note:'Medical emergency'},
+  {name:'Fire Brigade',     number:'998',           note:'Fire & rescue'},
+  {name:'BPS Headquarters', number:'+267 363 3999', note:'Non-emergency line'},
+  {name:'GBV Hotline',      number:'0800 600 111',  note:'Free 24/7'},
+];
+
+const policeStations = [
+  {name:'Gaborone Central',   number:'+267 3953555', note:'CBD, Khama Crescent'},
+  {name:'Broadhurst Station', number:'+267 3909555', note:'Plot 5830, Broadhurst'},
+  {name:'Gaborone West',      number:'+267 3931555', note:'Old Naledi area'},
+  {name:'Mogoditshane',       number:'+267 3989555', note:'Mogoditshane village'},
+];
+
+const wantedPersons = [
+  {name:'Unknown Male',   crime:'Armed Robbery', age:'25-35'},
+  {name:'Unknown Female', crime:'Fraud',          age:'30-40'},
+  {name:'Unknown Male',   crime:'Assault',        age:'20-30'},
+  {name:'Unknown Male',   crime:'Vehicle Theft',  age:'18-25'},
+];
+
+// ── RIPPLE ────────────────────────────────────────────────
+function ripple(e) {
+  const btn = e.currentTarget;
+  const r = btn.getBoundingClientRect();
+  const size = Math.max(r.width, r.height) * 1.4;
+  const x = (e.clientX || r.left + r.width/2) - r.left - size/2;
+  const y = (e.clientY || r.top + r.height/2) - r.top - size/2;
+  const wave = document.createElement('span');
+  wave.className = 'ripple-wave';
+  wave.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px`;
+  btn.appendChild(wave);
+  wave.addEventListener('animationend', () => wave.remove());
+}
+
+// ── MAP ───────────────────────────────────────────────────
+let map, tileLayer, markersGroup, heatLayer;
+const mapLayer = document.getElementById('map-layer');
+
+function addTile(light) {
+  if (tileLayer) { tileLayer.remove(); tileLayer = null; }
+  const url = light
+    ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+  tileLayer = L.tileLayer(url, {
+    subdomains:'abcd',
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom:20
+  });
+  tileLayer.addTo(map);
+}
+
+function makePulseIcon(color) {
+  return L.divIcon({
+    className:'',
+    html:`<div style="position:relative;width:18px;height:18px">
+      <div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:.25;animation:pulse-ring 2.5s ease-out infinite"></div>
+      <div style="position:absolute;inset:3px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,.7);box-shadow:0 2px 8px rgba(0,0,0,.5)"></div>
+    </div>`,
+    iconSize:[18,18], iconAnchor:[9,9]
+  });
+}
+
+function initMap() {
+  map = L.map('map', {zoomControl:false, attributionControl:true}).setView([-24.653,25.906],13);
+  addTile(isLight());
+  L.control.zoom({position:'topright'}).addTo(map);
+
+  markersGroup = L.layerGroup().addTo(map);
+  crimeMarkers.forEach(c => {
+    L.marker(c.coords, {icon: makePulseIcon(crimeColors[c.type]||'#64748b')})
+     .addTo(markersGroup)
+     .bindPopup(`<b style="text-transform:capitalize;color:${crimeColors[c.type]||'#64748b'}">${c.type}</b><br>${c.desc}`);
+  });
+
+  const intMap = {theft:.7,assault:.9,fraud:.5,vandalism:.4,gbv:.85,drugs:.6,robbery:.95,other:.4};
+  const baseHeat = crimeMarkers.map(c => [c.coords[0],c.coords[1],intMap[c.type]||.5]);
+  const synth = [[-24.660,25.920,.6],[-24.645,25.910,.5],[-24.630,25.935,.4],[-24.670,25.900,.7],[-24.625,25.915,.3],[-24.655,25.935,.5],[-24.680,25.925,.4]];
+  heatLayer = L.heatLayer([...baseHeat,...synth], {
+    radius:32, blur:22, maxZoom:16,
+    gradient:{'0.0':'#0000ff','0.3':'#00ffff','0.55':'#00ff00','0.75':'#ffff00','1.0':'#ff0000'}
+  });
+
+  // Long-press to report
+  let pressTimer;
+  map.on('contextmenu', e => startMapReport(e.latlng));
+  map.getContainer().addEventListener('touchstart', e => {
+    pressTimer = setTimeout(() => {
+      const rect = map.getContainer().getBoundingClientRect();
+      const latlng = map.containerPointToLatLng(L.point(e.touches[0].clientX-rect.left, e.touches[0].clientY-rect.top));
+      startMapReport(latlng);
+    }, 800);
+  }, {passive:true});
+  map.getContainer().addEventListener('touchend',  () => clearTimeout(pressTimer), {passive:true});
+  map.getContainer().addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
+}
+
+function startMapReport(latlng) {
+  goTab('report');
+  document.getElementById('report-loc').value = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+}
+
+function enableHeat()  { heatLayer.addTo(map); markersGroup.remove(); }
+function disableHeat() { heatLayer.remove(); markersGroup.addTo(map); }
+
+function locateMe() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 15));
+}
+
+// ── TABS ──────────────────────────────────────────────────
+function goTab(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    if (s.classList.contains('active')) s.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const screen = document.getElementById('screen-'+id);
+  screen.classList.add('active','entering');
+  screen.addEventListener('animationend', () => screen.classList.remove('entering'), {once:true});
+
+  document.querySelector(`[data-tab="${id}"]`).classList.add('active');
+
+  const onMap = id==='map'||id==='heat';
+  mapLayer.style.zIndex = onMap ? '1' : '-1';
+  document.getElementById('panic-strip').style.display = onMap ? 'flex' : 'none';
+
+  const heatBanner = document.getElementById('heat-banner');
+  const fabHeat    = document.getElementById('fab-heat');
+  if (id==='heat') {
+    enableHeat(); heatBanner.style.display='block'; fabHeat.classList.add('active');
+  } else {
+    disableHeat(); heatBanner.style.display='none'; fabHeat.classList.remove('active');
+  }
+
+  if (id==='safety') animateStats();
+  if (id==='tips')   renderTips();
+  setTimeout(() => map.invalidateSize(), 60);
+}
+
+// ── DRAWER ────────────────────────────────────────────────
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('visible');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('visible');
+}
+
+// ── PANIC (hold 2s) ───────────────────────────────────────
+function setupPanic(btnId, fillId, lblId, phone, defaultLbl) {
+  const btn  = document.getElementById(btnId);
+  const fill = document.getElementById(fillId);
+  const lbl  = document.getElementById(lblId);
+  if (!btn) return;
+  let raf, t0, holding=false;
+
+  function start(e) {
+    e.preventDefault();
+    if (holding) return;
+    holding=true; t0=performance.now();
+    lbl.textContent='Keep holding…';
+    (function tick() {
+      if (!holding) return;
+      const p = Math.min((performance.now()-t0)/2000,1);
+      fill.style.width = (p*100)+'%';
+      if (p>=1) {
+        lbl.textContent='Calling…';
+        navigator.geolocation && navigator.geolocation.getCurrentPosition(()=>{});
+        setTimeout(()=>{ window.location.href='tel:'+phone; },200);
+        reset(); return;
+      }
+      raf = requestAnimationFrame(tick);
+    })();
+  }
+  function reset() {
+    holding=false; cancelAnimationFrame(raf);
+    fill.style.width='0%'; lbl.textContent=defaultLbl;
+  }
+  btn.addEventListener('pointerdown',   start, {passive:false});
+  btn.addEventListener('pointerup',     reset);
+  btn.addEventListener('pointerleave',  reset);
+  btn.addEventListener('pointercancel', reset);
+}
+
+// ── THEME ─────────────────────────────────────────────────
+function isLight() { return document.documentElement.classList.contains('light') }
+
+function toggleTheme() {
+  const light = !isLight();
+  document.documentElement.classList.toggle('light', light);
+  localStorage.setItem('theme', light?'light':'dark');
+  document.getElementById('icon-sun').style.display  = light?'block':'none';
+  document.getElementById('icon-moon').style.display = light?'none':'block';
+  addTile(light);
+  if (window.doughnutChart) updateChartColors();
+}
+
+function applyStoredTheme() {
+  if (localStorage.getItem('theme')==='light') {
+    document.documentElement.classList.add('light');
+    document.getElementById('icon-sun').style.display  = 'block';
+    document.getElementById('icon-moon').style.display = 'none';
+  }
+}
+
+// ── MODAL ─────────────────────────────────────────────────
+const modalData = {
+  emergency:{title:'Emergency Contacts',rows:emergencyContacts.map(c=>({name:c.name,sub:c.note,call:c.number}))},
+  police:{title:'Police Stations',rows:policeStations.map(s=>({name:s.name,sub:s.note,call:s.number}))},
+  watch:{title:'Community Watch',rows:[
+    {name:'Block Watch Gaborone',sub:'Voluntary neighbourhood watch',call:'999'},
+    {name:'CBD Business Watch',sub:'Business security network',call:'999'},
+    {name:'Residential Safety Group',sub:'Report suspicious activity',call:'999'},
+  ]},
+  prevention:{title:'Crime Prevention Tips',rows:[
+    {name:'Lock Your Vehicle',sub:'Hide valuables, always lock up'},
+    {name:'Travel in Groups',sub:'Especially after dark'},
+    {name:'Report Suspicious Activity',sub:'Call 999 immediately'},
+    {name:'Secure Your Home',sub:'Locks, lights, alarm systems'},
+  ]}
+};
+
+function openModal(key) {
+  const d = modalData[key]; if (!d) return;
+  document.getElementById('modal-title').textContent = d.title;
+  document.getElementById('modal-body').innerHTML = d.rows.map(r=>`
+    <div class="modal-row">
+      <div class="modal-row-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="modal-row-info"><h4>${r.name}</h4><p>${r.sub||''}</p></div>
+      ${r.call?`<a href="tel:${r.call.replace(/\s/g,'')}" class="modal-call">${r.call}</a>`:''}
+    </div>
+  `).join('');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open') }
+
+// ── GBV ACCORDION ────────────────────────────────────────
+function toggleGBV() {
+  document.getElementById('gbv-body').classList.toggle('open');
+  document.getElementById('gbv-chevron').classList.toggle('open');
+}
+
+// ── TIPS ─────────────────────────────────────────────────
+function renderTips() {
+  const feed = document.getElementById('tips-feed');
+  document.getElementById('tips-count').textContent = tipsData.length+' tips';
+  feed.innerHTML = tipsData.map((t,i) => {
+    const color = crimeColors[t.category]||'#64748b';
+    return `<div class="tip-card" style="animation:fadeUp .4s var(--spring) ${i*0.07}s both">
+      <div class="tip-top">
+        <span class="tip-badge" style="background:${color}22;color:${color}">${t.category}</span>
+        ${t.verified?`<span class="tip-verified"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>`:''}
+      </div>
+      <div class="tip-meta">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${t.time}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2" fill="currentColor"/></svg>${t.location}
+      </div>
+      <div class="tip-text">${t.text}</div>
+      <div class="tip-foot">
+        <button class="tip-upvote ripple-host ${t.voted?'voted':''}" onclick="ripple(event);upvote(${t.id})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="${t.voted?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
+          ${t.upvotes}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function upvote(id) {
+  const t = tipsData.find(x=>x.id===id);
+  if (!t||t.voted) return;
+  t.voted=true; t.upvotes++; renderTips();
+}
+
+// ── REPORT ────────────────────────────────────────────────
+function submitReport() {
+  const type = document.getElementById('report-type').value;
+  const desc = document.getElementById('report-desc').value.trim();
+  const loc  = document.getElementById('report-loc').value.trim();
+  if (!desc) { alert('Please add a description.'); return; }
+  const coords = parseCoords(loc) || [-24.653,25.906];
+  L.marker(coords, {icon: makePulseIcon(crimeColors[type]||'#64748b')})
+   .addTo(markersGroup)
+   .bindPopup(`<b style="text-transform:capitalize;color:${crimeColors[type]||'#64748b'}">${type}</b><br>${desc}`);
+  document.getElementById('report-desc').value='';
+  document.getElementById('report-loc').value='';
+  goTab('map');
+}
+
+function submitTip() {
+  const cat  = document.getElementById('tip-cat').value;
+  const loc  = document.getElementById('tip-loc').value.trim();
+  const text = document.getElementById('tip-text').value.trim();
+  if (!text) { alert('Please describe the tip.'); return; }
+  tipsData.unshift({id:Date.now(),time:'Just now',location:loc||'Gaborone',category:cat,text,verified:false,upvotes:0,voted:false});
+  document.getElementById('tip-cat').value='theft';
+  document.getElementById('tip-loc').value='';
+  document.getElementById('tip-text').value='';
+  renderTips(); goTab('tips');
+}
+
+function parseCoords(s) {
+  const m = s.match(/([-\d.]+)\s*,\s*([-\d.]+)/);
+  return m ? [parseFloat(m[1]),parseFloat(m[2])] : null;
+}
+
+// ── AREA SCORES ───────────────────────────────────────────
+function renderAreas() {
+  document.getElementById('area-list').innerHTML = safetyGrid.map(a=>`
+    <div class="area-item">
+      <div class="area-name">${a.area}</div>
+      <div class="area-bar-bg"><div class="area-bar-fill" data-w="${a.score/100}" style="background:${a.color}"></div></div>
+      <div class="area-score" style="color:${a.color}">${a.score}%</div>
+    </div>
+  `).join('');
+}
+
+function animateAreaBars() {
+  document.querySelectorAll('.area-bar-fill').forEach(el => {
+    el.style.setProperty('--tw',el.dataset.w);
+    el.classList.add('animated');
+  });
+}
+
+// ── WANTED ────────────────────────────────────────────────
+function renderWanted() {
+  document.getElementById('wanted-grid').innerHTML = wantedPersons.map(w=>`
+    <div class="wanted-card">
+      <div class="wanted-img"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="wanted-info"><h4>${w.name}</h4><p>Age: ${w.age}</p><span class="wanted-badge">${w.crime}</span></div>
+    </div>
+  `).join('');
+}
+
+// ── STAT COUNT-UP ─────────────────────────────────────────
+let statsAnimated = false;
+function animateStats() {
+  if (statsAnimated) { animateAreaBars(); return; }
+  statsAnimated = true;
+  document.querySelectorAll('.s-val[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.count);
+    const suffix = el.dataset.suffix||'';
+    let start = 0;
+    const dur = 900;
+    const t0 = performance.now();
+    (function tick(now) {
+      const p = Math.min((now-t0)/dur,1);
+      const ease = 1-Math.pow(1-p,3);
+      el.textContent = Math.round(ease*target)+suffix;
+      if (p<1) requestAnimationFrame(tick);
+    })(performance.now());
+  });
+  setTimeout(animateAreaBars, 200);
+}
+
+// ── CHARTS ────────────────────────────────────────────────
+let doughnutChart, barChart;
+function initCharts() {
+  const tc = isLight() ? '#6060a0' : '#7878a0';
+  const gc = isLight() ? 'rgba(0,0,0,.06)' : 'rgba(255,255,255,.06)';
+
+  doughnutChart = new Chart(document.getElementById('chart-doughnut').getContext('2d'), {
+    type:'doughnut',
+    data:{
+      labels:['Theft','Assault','Fraud','Vandalism','Other'],
+      datasets:[{
+        data:[35,25,20,12,8],
+        backgroundColor:['#f59e0b','#ef4444','#8b5cf6','#6b7280','#64748b'],
+        borderWidth:0, hoverOffset:6
+      }]
+    },
+    options:{
+      animation:{duration:1000,easing:'easeOutQuart'},
+      plugins:{legend:{position:'bottom',labels:{color:tc,boxWidth:12,padding:14,borderRadius:4}}},
+      cutout:'65%'
+    }
+  });
+
+  barChart = new Chart(document.getElementById('chart-bar').getContext('2d'), {
+    type:'bar',
+    data:{
+      labels:['CBD','Broadhurst','Old Naledi','Mogoditshane','Tlokweng'],
+      datasets:[{
+        label:'Incidents',
+        data:[120,85,60,45,40],
+        backgroundColor:'rgba(200,255,0,.2)',
+        borderColor:'#C8FF00',
+        borderWidth:2,
+        borderRadius:8,
+        hoverBackgroundColor:'rgba(200,255,0,.35)'
+      }]
+    },
+    options:{
+      animation:{duration:1000,easing:'easeOutQuart'},
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:gc},ticks:{color:tc}},
+        y:{grid:{color:gc},ticks:{color:tc}}
+      }
+    }
+  });
+}
+
+function updateChartColors() {
+  const tc = isLight() ? '#6060a0' : '#7878a0';
+  const gc = isLight() ? 'rgba(0,0,0,.06)' : 'rgba(255,255,255,.06)';
+  [doughnutChart,barChart].forEach(c=>{
+    if (!c) return;
+    if (c.options.plugins?.legend) c.options.plugins.legend.labels.color=tc;
+    if (c.options.scales) Object.values(c.options.scales).forEach(ax=>{
+      if (ax.ticks) ax.ticks.color=tc;
+      if (ax.grid)  ax.grid.color=gc;
+    });
+    c.update();
+  });
+}
+
+// ── BOOT ──────────────────────────────────────────────────
+applyStoredTheme();
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  renderTips();
+  renderAreas();
+  renderWanted();
+  initCharts();
+  setupPanic('pm999','pf-pm999','lbl-pm999','999',       'Hold to Call 999');
+  setupPanic('pmgbv','pf-pmgbv','lbl-pmgbv','0800600111','Hold — GBV Hotline 0800 600 111');
+  setupPanic('ps999','pf-ps999','lbl-ps999','999',       'Hold to Call 999');
+  setupPanic('psgbv','pf-psgbv','lbl-psgbv','0800600111','Hold — GBV Emergency 0800 600 111');
+  goTab('map');
+});
+</script>
+</body>
+</html>
